@@ -1,0 +1,30 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "cd evoting-frontend && npm install && npm run build",
+    "dev": "node server.js",
+    "build": "echo 'No build step required' ",
+    "start": "node server.js",
+    "install": "npm install",
+    "vercel-build": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "ethers": "^5.8.0",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "nodemailer": "^6.10.0",
+    "path": "^0.12.7"
+  }
+}
