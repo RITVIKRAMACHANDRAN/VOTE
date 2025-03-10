@@ -1,138 +1,125 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const { ethers, Contract, Wallet } = require("ethers");
-const fs = require("fs");
-const path = require("path");
+const { Contract, Wallet, ethers } = require("ethers");
+const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const fs = require("fs");
+const path = require("path")
 
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Connect to MongoDB
+mongoose.connect("mongodb+srv://ritviksreesai:MonkeyDluffy1@evoting.pfp3d.mongodb.net/?retryWrites=true&w=majority&appName=evoting")
+    .then(() => console.log("Connected to MongoDB"))
+    .catch(err => console.error("MongoDB connection error:", err));
+
+// Define Mongoose schemas
+const CandidateSchema = new mongoose.Schema({ name: String, voteCount: Number });
+const VoterSchema = new mongoose.Schema({ fingerprint: String, hasVoted: Boolean });
+
+const Candidate = mongoose.model("Candidate", CandidateSchema);
+const Voter = mongoose.model("Voter", VoterSchema);
+
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "build")));
 
 // ✅ Ethereum Provider & Contract
 const provider = new ethers.getDefaultProvider(process.env.RPC_URL);
 const wallet = new Wallet("0x1024cf6d29d6011dd7d7b05532ecc58e96249d6e85776de70dc7f89fe723daac", provider);
 const contractABI = JSON.parse(fs.readFileSync(path.join(__dirname, "artifacts", "contracts", "EVoting.sol", "EVoting.json"), "utf-8")).abi;
 const contract = new Contract("0xcC9B2454F7bcC009b2696Af9De6D745307aB3A49", contractABI, wallet);
+// Add a new candidate (Backend storage)
+app.post("/addCandidate", async (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: "Candidate name is required" });
 
-// ✅ Storage for Fingerprints
-const fingerprintStorage = {};
-
-// ✅ API Test Route
-app.get("/api", (req, res) => {
-    res.json({ message: "API is working" });
+    try {
+        const newCandidate = new Candidate({ name, voteCount: 0 });
+        await newCandidate.save();
+        res.status(201).json({ message: "Candidate added successfully" });
+    } catch (error) {
+        console.error("Error adding candidate:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 
-// ✅ Register Fingerprint for Voter
-// ✅ Register Voter with Fingerprint
-app.post("/api/registerVoterWithFingerprint", async (req, res) => {
-    const { voterId, fingerprint } = req.body;
-    if (!voterId || !fingerprint) {
-      return res.status(400).json({ error: "Voter ID and Fingerprint are required." });
-    }
-  
-    fingerprintDB[voterId] = fingerprint;
-    return res.json({ message: "Voter registered successfully with fingerprint." });
-  });
-
-// ✅ Authenticate Voter with Fingerprint
-app.post("/api/authenticateFingerprint", async (req, res) => {
-    const { voterId, fingerprint } = req.body;
-    if (!voterId || !fingerprint) {
-      return res.status(400).json({ error: "Voter ID and Fingerprint are required." });
-    }
-  
-    if (fingerprintDB[voterId] === fingerprint) {
-      return res.json({ message: "Authentication successful." });
-    } else {
-      return res.status(401).json({ error: "Invalid fingerprint." });
-    }
-  });
-  
-// ✅ Add Candidate
-app.post("/api/addCandidate", async (req, res) => {
+// Get candidate list
+app.get("/getCandidates", async (req, res) => {
     try {
-        const { candidateName } = req.body;
-        if (!candidateName) {
-          return res.status(400).json({ error: "Candidate name is required." });
-        }
-    
-        const tx = await contract.addCandidate(candidateName);
-        await tx.wait();
-    
-        res.json({ message: "Candidate added successfully." });
-      } catch (error) {
-        console.error("Error adding candidate:", error);
-        res.status(500).json({ error: "Failed to add candidate." });
-      }
-    });
-// ✅ Fetch Candidate List
-app.get("/api/getCandidates", async (req, res) => {
-    try {
-        const candidateCount = await contract.getCandidateCount();
-        let candidates = [];
-
-        for (let i = 0; i < candidateCount; i++) {
-            const candidate = await contract.getCandidate(i);
-            candidates.push(candidate);
-        }
-
+        const candidates = await Candidate.find();
         res.json(candidates);
     } catch (error) {
         console.error("Error fetching candidates:", error);
-        res.status(500).json({ error: "Failed to fetch candidates" });
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-// ✅ Vote for a Candidate
-// ✅ Vote with Fingerprint Authentication
-app.post("/api/vote", async (req, res) => {
+// Register voter with fingerprint
+app.post("/registerVoter", async (req, res) => {
+    const { fingerprint } = req.body;
+    if (!fingerprint) return res.status(400).json({ error: "Fingerprint is required" });
+
     try {
-        const { voterId, fingerprint, candidateIndex } = req.body;
-    
-        if (!voterId || !fingerprint || candidateIndex === undefined) {
-          return res.status(400).json({ error: "Voter ID, fingerprint, and candidate index are required." });
-        }
-    
-        if (fingerprintDB[voterId] !== fingerprint) {
-          return res.status(401).json({ error: "Fingerprint authentication failed." });
-        }
-    
-        const tx = await contract.vote(candidateIndex);
-        await tx.wait();
-    
-        res.json({ message: "Vote cast successfully." });
-      } catch (error) {
-        console.error("Error voting:", error);
-        res.status(500).json({ error: "Failed to cast vote." });
-      }
-    });
-// ✅ API: Get Vote Count for Each Candidate
-app.get("/api/getVoteCounts", async (req, res) => {
-    try {
-      const candidates = await contract.getCandidate();
-      const voteCounts = [];
-  
-      for (let i = 0; i < candidates.length; i++) {
-        const votes = await contract.getVoteCount(i);
-        voteCounts.push({ candidate: candidates[i], votes: votes.toString() });
-      }
-  
-      res.json(voteCounts);
+        const existingVoter = await Voter.findOne({ fingerprint });
+        if (existingVoter) return res.status(400).json({ error: "Voter already registered" });
+
+        const newVoter = new Voter({ fingerprint, hasVoted: false });
+        await newVoter.save();
+        res.status(201).json({ message: "Voter registered successfully" });
     } catch (error) {
-      console.error("Error fetching vote counts:", error);
-      res.status(500).json({ error: "Failed to retrieve vote counts." });
+        console.error("Error registering voter:", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
-  });
-  
+});
 
+// Authenticate fingerprint
+app.post("/authenticateVoter", async (req, res) => {
+    const { fingerprint } = req.body;
+    if (!fingerprint) return res.status(400).json({ error: "Fingerprint is required" });
 
-// ✅ Start Server
+    try {
+        const voter = await Voter.findOne({ fingerprint });
+        if (!voter) return res.status(404).json({ error: "Voter not found" });
+
+        res.json({ message: "Fingerprint authenticated successfully" });
+    } catch (error) {
+        console.error("Error authenticating voter:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// Vote function with fingerprint authentication
+app.post("/vote", async (req, res) => {
+    const { fingerprint, candidateId } = req.body;
+    if (!fingerprint || !candidateId) return res.status(400).json({ error: "Fingerprint and Candidate ID are required" });
+
+    try {
+        const voter = await Voter.findOne({ fingerprint });
+        if (!voter) return res.status(404).json({ error: "Voter not found" });
+        if (voter.hasVoted) return res.status(400).json({ error: "Voter has already voted" });
+
+        const candidate = await Candidate.findById(candidateId);
+        if (!candidate) return res.status(404).json({ error: "Candidate not found" });
+
+        // Update vote count in database
+        candidate.voteCount += 1;
+        await candidate.save();
+
+        // Mark voter as voted
+        voter.hasVoted = true;
+        await voter.save();
+
+        res.json({ message: "Vote cast successfully" });
+
+    } catch (error) {
+        console.error("Error casting vote:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+    console.log(`Server running on port ${port}`);
 });
