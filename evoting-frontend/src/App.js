@@ -25,7 +25,7 @@ function App() {
     // ✅ Fetch Candidates
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get(`${SERVER_URL}/getCandidates`);
+            const response = await axios.get(`${SERVER_URL}/api/getCandidates`);
             setCandidates(response.data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
@@ -35,7 +35,7 @@ function App() {
     // ✅ Fetch Vote Counts
     const fetchVoteCounts = async () => {
         try {
-            const response = await axios.get(`${SERVER_URL}/getVoteCounts`);
+            const response = await axios.get(`${SERVER_URL}/api/getVoteCounts`);
             setVoteCounts(response.data);
         } catch (error) {
             console.error("Error fetching vote counts:", error);
@@ -45,21 +45,21 @@ function App() {
     // ✅ Admin: Add Candidate
     const addCandidate = async (name) => {
         try {
-            await axios.post(`${SERVER_URL}/addCandidate`, { name });
+            await axios.post(`${SERVER_URL}/api/addCandidate`, { name: candidateName });
             alert("Candidate added successfully!");
-            fetchCandidates();
         } catch (error) {
             console.error("Error adding candidate:", error);
             alert("Failed to add candidate.");
         }
     };
+    
 
     // ✅ Admin: Register Voter with Fingerprint
     const registerVoterWithFingerprint = async () => {
         try {
             const publicKey = await navigator.credentials.create({ publicKey: {/* WebAuthn Config */} });
             setFingerprintData(publicKey);
-            await axios.post(`${SERVER_URL}/registerVoter`, { publicKey, account });
+            await axios.post(`${SERVER_URL}/api/registerVoter`, { publicKey, account });
             alert("Voter registered successfully!");
         } catch (error) {
             console.error("Error registering voter:", error);
@@ -75,7 +75,7 @@ function App() {
         }
         try {
             const assertion = await navigator.credentials.get({ publicKey: {/* WebAuthn Config */} });
-            await axios.post(`${SERVER_URL}/verifyFingerprintVote`, { assertion, candidateIndex: selectedCandidate });
+            await axios.post(`${SERVER_URL}/api/verifyFingerprintVote`, { assertion, candidateIndex: selectedCandidate });
             alert("Vote cast successfully!");
             fetchVoteCounts();
         } catch (error) {
@@ -107,6 +107,7 @@ function App() {
                     
                     <h3>Register Voter</h3>
                     <button onClick={registerVoterWithFingerprint}>Register Voter (Fingerprint)</button>
+                    
                 </div>
             )}
 

@@ -30,7 +30,7 @@ app.get("/api", (req, res) => {
 
 // ✅ Register Fingerprint for Voter
 // ✅ Register Voter with Fingerprint
-app.post("/api/registerVoter", async (req, res) => {
+app.post("/api/registerVoterWithFingerprint", async (req, res) => {
     const { voterId, fingerprint } = req.body;
     if (!voterId || !fingerprint) {
       return res.status(400).json({ error: "Voter ID and Fingerprint are required." });
@@ -41,7 +41,7 @@ app.post("/api/registerVoter", async (req, res) => {
   });
 
 // ✅ Authenticate Voter with Fingerprint
-app.post("/authenticateFingerprint", async (req, res) => {
+app.post("/api/authenticateFingerprint", async (req, res) => {
     const { voterId, fingerprint } = req.body;
     if (!voterId || !fingerprint) {
       return res.status(400).json({ error: "Voter ID and Fingerprint are required." });
@@ -55,7 +55,7 @@ app.post("/authenticateFingerprint", async (req, res) => {
   });
   
 // ✅ Add Candidate
-app.post("/addCandidate", async (req, res) => {
+app.post("/api/addCandidate", async (req, res) => {
     try {
         const { candidateName } = req.body;
         if (!candidateName) {
@@ -72,7 +72,7 @@ app.post("/addCandidate", async (req, res) => {
       }
     });
 // ✅ Fetch Candidate List
-app.get("/getCandidates", async (req, res) => {
+app.get("/api/getCandidates", async (req, res) => {
     try {
         const candidateCount = await contract.getCandidateCount();
         let candidates = [];
@@ -91,7 +91,7 @@ app.get("/getCandidates", async (req, res) => {
 
 // ✅ Vote for a Candidate
 // ✅ Vote with Fingerprint Authentication
-app.post("/vote", async (req, res) => {
+app.post("/api/vote", async (req, res) => {
     try {
         const { voterId, fingerprint, candidateIndex } = req.body;
     
@@ -113,7 +113,7 @@ app.post("/vote", async (req, res) => {
       }
     });
 // ✅ API: Get Vote Count for Each Candidate
-app.get("/getVoteCounts", async (req, res) => {
+app.get("/api/getVoteCounts", async (req, res) => {
     try {
       const candidates = await contract.getCandidate();
       const voteCounts = [];
