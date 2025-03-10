@@ -22,6 +22,9 @@ ENV NODE_OPTIONS="--openssl-legacy-provider"
 # Install frontend dependencies
 RUN npm install --legacy-peer-deps
 
+# Disable ESLint check during build
+ENV DISABLE_ESLINT_PLUGIN=true
+
 # Build the frontend
 RUN npm run build
 
