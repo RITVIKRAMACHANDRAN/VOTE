@@ -12,9 +12,14 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Connect to MongoDB
-mongoose.connect("mongodb+srv://ritviksreesai:MonkeyDluffy1@evoting.pfp3d.mongodb.net/?retryWrites=true&w=majority&appName=evoting")
-    .then(() => console.log("Connected to MongoDB"))
-    .catch(err => console.error("MongoDB connection error:", err));
+const mongoURI = process.env.MONGO_URI || "mongodb://localhost:27017/myDatabase";
+
+mongoose.connect(mongoURI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connected to MongoDB"))
+.catch(err => console.error("❌ MongoDB connection error:", err));
 
 // Define Mongoose schemas
 const CandidateSchema = new mongoose.Schema({ name: String, voteCount: Number });
