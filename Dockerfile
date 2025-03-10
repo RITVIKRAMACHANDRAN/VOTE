@@ -1,14 +1,14 @@
-# Use Node.js 18 (or change to 20 if needed)
+# Use a stable Node.js version
 FROM node:18-alpine
 
 # Set the working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json before installing dependencies
+# Copy package.json and package-lock.json first (better cache optimization)
 COPY package*.json ./
 
-# Clean install dependencies
-RUN rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
+# Install dependencies with legacy peer dependencies handling
+RUN npm install --legacy-peer-deps
 
 # Copy the entire project after installing dependencies
 COPY . .
@@ -19,17 +19,17 @@ WORKDIR /app/evoting-frontend
 # Ensure correct Node.js options
 ENV NODE_OPTIONS="--openssl-legacy-provider"
 
-# Install frontend dependencies separately to avoid conflicts
-RUN rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
+# Install frontend dependencies
+RUN npm install --legacy-peer-deps
 
-# Build frontend
+# Build the frontend
 RUN npm run build
 
-# Move frontend build to backend's public folder
+# Move frontend build to backend’s public folder
 WORKDIR /app
-RUN mv evoting-frontend/build server
+RUN mv evoting-frontend/build server/public || true
 
-# Expose the backend port
+# Expose backend port
 EXPOSE 5000
 
 # Start the backend server
