@@ -1,37 +1,33 @@
-# Use Node.js as base image
-FROM node:18
+# Use a Node.js base image
+FROM node:18-alpine
 
-# Set working directory for backend
+# Set the working directory
 WORKDIR /app
 
-# Copy backend package.json and install dependencies
-COPY package.json package-lock.json ./
-RUN npm install --legacy-peer-deps --force
+# Copy package.json and package-lock.json
+COPY package*.json ./
 
-# Copy backend files
+# Install dependencies
+RUN rm -rf node_modules package-lock.json && npm install --force
+
+# Copy the entire project
 COPY . .
 
-# Set working directory for frontend
+# Set the working directory to frontend
 WORKDIR /app/evoting-frontend
 
-# Install frontend dependencies
-RUN npm install --legacy-peer-deps --force
-
-# Fix OpenSSL issue for Webpack
+# Ensure correct Node.js options
 ENV NODE_OPTIONS="--openssl-legacy-provider"
 
-# Build the frontend
-RUN npm run build
+# Install frontend dependencies and build
+RUN npm install --force && npm run build
 
-
-# Move frontend build to backend's public folder
-RUN mv build ../server/public
-
-# Set working directory back to backend
+# Move frontend build to backend public folder (if using Express)
 WORKDIR /app
+RUN mv evoting-frontend/build server/public
 
-# Expose backend port
-EXPOSE 3000
+# Expose the port (adjust based on your backend server)
+EXPOSE 5000
 
-# Start backend server
+# Start the backend server
 CMD ["node", "server/server.js"]
