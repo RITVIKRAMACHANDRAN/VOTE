@@ -77,9 +77,9 @@ app.get("/getCandidates", async (req, res) => {
 });
 
 // ✅ Serve React Frontend Separately
-app.use(express.static("frontend/build")); // Make sure this is correct
+app.use(express.static("evoting-frontend/build")); // Make sure this is correct
 app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"));
+    res.sendFile(path.resolve(__dirname, "evoting-frontend", "build", "index.html"));
 });
 
 // ✅ Register Voter with Fingerprint
