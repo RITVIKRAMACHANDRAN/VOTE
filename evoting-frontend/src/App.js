@@ -16,12 +16,14 @@ function App() {
 
     useEffect(() => {
         fetchCandidates();
-    }, []);
+    }, []); 
+    
 
-    // ✅ Fetch Candidates (Fixes e.map error by ensuring candidates is an array)
+    // ✅ Fetch Candidates
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get("/getCandidates", { headers: { "Cache-Control": "no-cache" } });
+            const response = await axios.get(`${SERVER_URL}/getCandidates`, { headers: { "Cache-Control": "no-cache" } });
+            console.log("Fetched Candidates (Frontend):", response.data);  // Debugging log
             setCandidates(response.data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
