@@ -2,6 +2,9 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Web3 from "web3";
 
+const SERVER_URL = "";  
+
+
 function App() {
     const [candidates, setCandidates] = useState([]);
     const [newCandidate, setNewCandidate] = useState("");
@@ -19,7 +22,7 @@ function App() {
     // 🔹 **Fetch Admin Address from Backend**
     const fetchAdminAddress = async () => {
         try {
-            const response = await axios.get("/getAdminAddress"); // API to get admin's wallet address
+            const response = await axios.get("${SERVER_URL}/getAdminAddress"); // API to get admin's wallet address
             setAdminAddress(response.data.admin);
         } catch (error) {
             console.error("Error fetching admin address:", error);
@@ -29,7 +32,7 @@ function App() {
     // 🔹 **Fetch Candidates from Backend**
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get("/getCandidates"); // API to get stored candidates
+            const response = await axios.get("${SERVER_URL}/getCandidates"); // API to get stored candidates
             setCandidates(response.data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
@@ -60,7 +63,7 @@ function App() {
             return alert("Only the admin can add candidates.");
         }
         try {
-            await axios.post("/addCandidate", { name: newCandidate, adminAddress: walletAddress });
+            await axios.post("${SERVER_URL}/addCandidate", { name: newCandidate, adminAddress: walletAddress });
             setNewCandidate("");
             fetchCandidates();
             alert("Candidate added successfully");
@@ -73,7 +76,7 @@ function App() {
     const registerVoter = async () => {
         if (!fingerprint) return alert("Enter fingerprint data");
         try {
-            await axios.post("/registerVoter", { fingerprint });
+            await axios.post("${SERVER_URL}/registerVoter", { fingerprint });
             setFingerprint("");
             alert("Voter registered successfully");
         } catch (error) {
@@ -88,7 +91,7 @@ function App() {
         if (voteMethod === "fingerprint") {
             if (!fingerprint) return alert("Enter your fingerprint");
             try {
-                await axios.post("/vote", { fingerprint, candidateId: selectedCandidate });
+                await axios.post("${SERVER_URL}/vote", { fingerprint, candidateId: selectedCandidate });
                 alert("Vote cast successfully");
                 fetchCandidates();
             } catch (error) {
@@ -97,7 +100,7 @@ function App() {
         } else if (voteMethod === "metamask") {
             if (!walletAddress) return alert("Connect MetaMask first");
             try {
-                await axios.post("/voteWithMetaMask", { walletAddress, candidateId: selectedCandidate });
+                await axios.post("${SERVER_URL}/voteWithMetaMask", { walletAddress, candidateId: selectedCandidate });
                 alert("Vote cast successfully using MetaMask!");
                 fetchCandidates();
             } catch (error) {
@@ -147,12 +150,12 @@ function App() {
             {/* 🔹 Candidate List & Voting */}
             <div>
                 <h2>Candidate List & Voting</h2>
-                {candidates.map((candidate) => (
+                Array.isArray(candidates) ? {candidates.map((candidate) => (
                     <div key={candidate._id}>
                         <p>{candidate.name} - Votes: {candidate.voteCount}</p>
                         <button onClick={() => setSelectedCandidate(candidate._id)}>Select</button>
                     </div>
-                ))}
+                ))} : []
                 
                 {/* 🔹 Voting Options */}
                 <div>
