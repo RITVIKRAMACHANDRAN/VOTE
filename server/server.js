@@ -9,10 +9,12 @@ const path = require("path");
 
 dotenv.config();
 const app = express();
+const router = express.Router();
 const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(router);
 app.use(express.static(path.join(__dirname, "build")));  // Serve frontend
 
 // Serve frontend for all unknown routes
