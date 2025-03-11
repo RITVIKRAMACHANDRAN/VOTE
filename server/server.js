@@ -21,7 +21,7 @@ app.get("*", (req, res) => {
 });
 
 // Connect to MongoDB
-const mongoURI = "mongodb+srv://ritviksreesai:MonkeyDluffy1@evoting.pfp3d.mongodb.net/";
+const mongoURI = process.env.MONGO_URI || "mongodb://mongo:zSkzIGphXSZiujybRiQLDPUWZkKAMeid@yamanote.proxy.rlwy.net:47373"
 mongoose.connect(mongoURI, {})
 .then(() => console.log("✅ Connected to MongoDB"))
 .catch(err => console.error("❌ MongoDB connection error:", err));
