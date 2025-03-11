@@ -22,11 +22,12 @@ function App() {
     // ✅ Fetch Candidates
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get(`https://vote-production-6fe3.up.railway.app//getCandidates`, {
-                headers: { "Cache-Control": "no-cache" }
+            const response = await axios.get(`${SERVER_URL}/getCandidates`, {
+                headers: { "Accept": "application/json" }, // Ensure JSON response
             });
+    
             console.log("Fetched Candidates (Frontend):", response.data);
-            
+    
             if (!Array.isArray(response.data)) {
                 throw new Error("Invalid candidates data format");
             }
@@ -36,6 +37,7 @@ function App() {
             console.error("Error fetching candidates:", error);
         }
     };
+    
     
     // ✅ Connect MetaMask
     const connectMetaMask = async () => {

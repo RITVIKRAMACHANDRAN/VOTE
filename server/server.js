@@ -67,13 +67,19 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 // ✅ Get Candidates
 app.get("/getCandidates", async (req, res) => {
     try {
-        const candidates = await Candidate.find();  // Fetch from MongoDB
-        console.log("Fetched candidates:", candidates); // Debugging log
-        res.json(candidates);
+        const candidates = await Candidate.find(); // ✅ Fetch from MongoDB
+        console.log("Sending candidates:", candidates);
+        res.json(candidates); // ✅ Send JSON
     } catch (error) {
         console.error("Error fetching candidates:", error);
         res.status(500).json({ message: "Failed to fetch candidates" });
     }
+});
+
+// ✅ Serve React Frontend Separately
+app.use(express.static("frontend/build")); // Make sure this is correct
+app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"));
 });
 
 // ✅ Register Voter with Fingerprint
