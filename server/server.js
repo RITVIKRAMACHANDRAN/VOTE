@@ -11,6 +11,14 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "build")));  // Serve static frontend
+
+// Serve Frontend for all unknown routes
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
+});
+
 // Connect to MongoDB
 const mongoURI = "mongodb+srv://ritviksreesai:MonkeyDluffy1@evoting.pfp3d.mongodb.net/";
 mongoose.connect(mongoURI, {})
