@@ -18,13 +18,18 @@ function App() {
         fetchCandidates();
     }, []);
 
-    // ✅ Fetch Candidates
+    // ✅ Fetch Candidates (Fixes e.map error by ensuring candidates is an array)
     const fetchCandidates = async () => {
         try {
             const response = await axios.get(`${SERVER_URL}/getCandidates`);
-            setCandidates(response.data);
+            if (Array.isArray(response.data)) {
+                setCandidates(response.data);
+            } else {
+                setCandidates([]); // Ensures it's an empty array if response is invalid
+            }
         } catch (error) {
             console.error("Error fetching candidates:", error);
+            setCandidates([]); // Ensures no crash due to undefined data
         }
     };
 
@@ -54,10 +59,10 @@ function App() {
             }
 
             const publicKey = {
-                challenge: new Uint8Array(32), // Random challenge
+                challenge: new Uint8Array(32),
                 rp: { name: "E-Voting System" },
                 user: {
-                    id: new Uint8Array(16), // User ID
+                    id: new Uint8Array(16),
                     name: walletAddress || "anonymous",
                     displayName: walletAddress || "anonymous",
                 },
