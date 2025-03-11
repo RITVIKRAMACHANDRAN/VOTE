@@ -164,7 +164,7 @@ function App() {
             {/* 🔹 Candidate List */}
             <div>
                 <h2>Candidate List</h2>
-                {candidates.length > 0 ? (
+                {Array.isArray(candidates) && candidates.length > 0 ? (
                     candidates.map((candidate) => (
                         <div key={candidate._id} style={{ border: "1px solid black", padding: "10px", margin: "5px" }}>
                             <p><strong>{candidate.name}</strong></p>
