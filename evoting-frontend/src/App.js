@@ -13,7 +13,15 @@ function App() {
     const [walletAddress, setWalletAddress] = useState(null);
     const [voteMethod, setVoteMethod] = useState("");
     const [adminAddress, setAdminAddress] = useState("");
+    const [privateKey, setPrivateKey] = useState("");
+    const [candidateName, setCandidateName] = useState("");
 
+    const handleAdminLogin = () => {
+        localStorage.setItem("adminPrivateKey", privateKey);
+        alert("Admin authenticated!");
+        window.location.reload();
+    };
+    
     useEffect(() => {
         fetchCandidates();
         fetchAdminAddress();
@@ -58,33 +66,61 @@ function App() {
 
     // 🔹 Admin - Add Candidate
     const addCandidate = async () => {
-        if (!newCandidate) return alert("Enter candidate name");
-        if (walletAddress !== adminAddress) {
-            return alert("Only the admin can add candidates.");
-        }
         try {
-            await axios.post(`${SERVER_URL}/addCandidate`, { name: newCandidate, adminAddress: walletAddress });
-            setNewCandidate("");
-            fetchCandidates();
-            alert("Candidate added successfully");
+            const privateKey = localStorage.getItem("adminPrivateKey");
+            if (!privateKey) {
+                alert("Please authenticate as admin first.");
+                return;
+            }
+            if (!candidateName) {
+                alert("Enter candidate name.");
+                return;
+            }
+
+            const response = await axios.post(`${SERVER_URL}/addCandidate`, { name: candidateName, privateKey });
+            alert(response.data.message);
+            setCandidateName(""); // ✅ Clear input after adding
         } catch (error) {
-            console.error("Error adding candidate:", error);
+            alert("Error adding candidate");
         }
     };
-
     // 🔹 Register Voter with Fingerprint
     const registerVoterWithFingerprint = async () => {
-        try {
-            const response = await axios.post(`${SERVER_URL}/registerVoterFingerprint`);
-            setFingerprint(response.data.fingerprint);
-            setIsRegistered(true);
-            alert("Voter registered successfully with fingerprint!");
-        } catch (error) {
-            console.error("Error registering voter:", error);
-            alert("Voter registration failed!");
-        }
-    };
-
+            try {
+                const publicKeyCredentialCreationOptions = {
+                    challenge: new Uint8Array(32), // Generate a random challenge
+                    rp: { name: "E-Voting System" },
+                    user: {
+                        id: new Uint8Array(16), // Random user ID
+                        name: walletAddress || "anonymous",
+                        displayName: "Voter"
+                    },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256 Algorithm
+                    authenticatorSelection: { authenticatorAttachment: "platform" }, // Use built-in sensors
+                    timeout: 60000,
+                    attestation: "direct"
+                };
+        
+                // Call WebAuthn API for fingerprint registration
+                const credential = await navigator.credentials.create({ publicKey: publicKeyCredentialCreationOptions });
+        
+                if (!credential) {
+                    alert("Fingerprint registration failed.");
+                    return;
+                }
+        
+                // Convert fingerprint data to Base64
+                const fingerprintData = btoa(JSON.stringify(credential));
+        
+                // Send fingerprint data to the backend
+                await axios.post(`${SERVER_URL}/registerFingerprint`, { fingerprint: fingerprintData });
+                alert("Fingerprint registered successfully!");
+            } catch (error) {
+                console.error("Error registering fingerprint:", error);
+                alert("Fingerprint registration failed. Make sure you are using a supported device.");
+            }
+        };
+        
     // 🔹 Capture Fingerprint for Voting
     const captureFingerprint = async () => {
         try {
@@ -98,29 +134,37 @@ function App() {
     };
 
     // 🔹 Vote using Fingerprint or MetaMask
-    const vote = async () => {
-        if (!selectedCandidate) {
-            alert("Please select a candidate first.");
-            return;
-        }
-
+    const vote = async (candidateId) => {
         try {
             if (voteMethod === "fingerprint") {
-                const capturedFingerprint = await captureFingerprint();
-                if (!capturedFingerprint) return;
-
-                const response = await axios.post(`${SERVER_URL}/voteUsingFingerprint`, {
-                    fingerprint: capturedFingerprint,
-                    candidateId: selectedCandidate
-                });
-
+                const publicKeyCredentialRequestOptions = {
+                    challenge: new Uint8Array(32), // Generate a random challenge
+                    timeout: 60000,
+                    userVerification: "required"
+                };
+    
+                // Call WebAuthn API for authentication
+                const credential = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+    
+                if (!credential) {
+                    alert("Fingerprint authentication failed.");
+                    return;
+                }
+    
+                const fingerprintData = btoa(JSON.stringify(credential));
+    
+                // Send fingerprint vote to the backend
+                const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintData, candidateId });
                 alert(response.data.message);
-            } else if (voteMethod === "metamask") {
+            } 
+            
+            else if (voteMethod === "metamask") {
                 if (!walletAddress) {
                     alert("Connect MetaMask first");
                     return;
                 }
-                await axios.post(`${SERVER_URL}/voteWithMetaMask`, { walletAddress, candidateId: selectedCandidate });
+    
+                await axios.post(`${SERVER_URL}/voteWithMetaMask`, { walletAddress, candidateId });
                 alert("Vote cast successfully using MetaMask!");
             }
         } catch (error) {
@@ -128,7 +172,7 @@ function App() {
             alert("Voting failed. Please try again.");
         }
     };
-
+    
     return (
         <div>
             <h1>E-Voting System</h1>

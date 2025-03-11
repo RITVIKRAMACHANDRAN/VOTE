@@ -40,33 +40,50 @@ const contractABI = JSON.parse(fs.readFileSync(path.join(__dirname, "artifacts",
 const contract = new Contract("0xcC9B2454F7bcC009b2696Af9De6D745307aB3A49", contractABI, wallet);
 
 // 🔹 Get Admin Address
-app.get("/getAdminAddress", async (req, res) => {
-    try {
-        const admin = await contract.admin();
-        res.json({ admin });
-    } catch (error) {
-        res.status(500).json({ error: "Error fetching admin address" });
+const isAdmin = (req, res, next) => {
+    const { privateKey } = req.body;
+    if (privateKey !== 0x0EA217414c1FaC69E4CBf49F3d8277dF69a76b7D){
+        return res.status(403).json({ error: "Unauthorized: You are not the admin" });
     }
-});
-
+    next();
+};
 // 🔹 Add Candidate (Admin only)
-app.post("/addCandidate", async (req, res) => {
-    try {
-        const { name, adminAddress } = req.body;
 
-        const contractAdmin = await contract.admin();
-        if (adminAddress.toLowerCase() !== contractAdmin.toLowerCase()) {
-            return res.status(403).json({ error: "Only the admin can add candidates" });
+router.post("/addCandidate", async (req, res) => {
+    try {
+        const { name, privateKey } = req.body;
+
+        if (!name || !privateKey) {
+            return res.status(400).json({ message: "Missing required fields." });
         }
 
-        const candidate = new Candidate({ name, voteCount: 0 });
-        await candidate.save();
-        res.json({ message: "Candidate added successfully" });
+        // Get the wallet address from the private key
+        let wallet;
+        try {
+            wallet = new ethers.Wallet(privateKey);
+        } catch (error) {
+            return res.status(400).json({ message: "Invalid private key." });
+        }
+
+        const derivedAddress = wallet.address;
+
+        // Check if the derived address matches the admin address
+        if (derivedAddress.toLowerCase() !== privatekey.toLowerCase()) {
+            return res.status(403).json({ message: "Unauthorized: You are not the admin." });
+        }
+
+        // Save candidate in MongoDB
+        const newCandidate = new Candidate({ name, voteCount: 0 });
+        await newCandidate.save();
+
+        res.status(201).json({ message: "Candidate added successfully!" });
     } catch (error) {
         console.error("Error adding candidate:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        res.status(500).json({ message: "Internal Server Error." });
     }
 });
+
+module.exports = router;
 
 // 🔹 Get Candidates List
 app.get("/getCandidates", async (req, res) => {
@@ -80,17 +97,18 @@ app.get("/getCandidates", async (req, res) => {
 });
 
 // 🔹 Register Voter with Fingerprint
-app.post("/registerVoterFingerprint", async (req, res) => {
+app.post("/registerVoterWithFingerprint", async (req, res) => {
     try {
-        const fingerprintData = "fingerprint_" + Date.now();
-        const voter = new Voter({ fingerprint: fingerprintData, hasVoted: false });
-        await voter.save();
-        res.json({ fingerprint: fingerprintData });
+        const { fingerprint } = req.body;
+        const newVoter = new Voter({ fingerprint, hasVoted: false });
+        await newVoter.save();
+        res.json({ message: "Fingerprint registered successfully!" });
     } catch (error) {
-        console.error("Error registering voter:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error("Error registering fingerprint:", error);
+        res.status(500).json({ error: "Fingerprint registration failed." });
     }
 });
+
 
 // 🔹 Authenticate Fingerprint
 app.post("/authenticateVoter", async (req, res) => {
@@ -113,23 +131,64 @@ app.post("/voteUsingFingerprint", async (req, res) => {
         const { fingerprint, candidateId } = req.body;
         const voter = await Voter.findOne({ fingerprint });
 
-        if (!voter || voter.hasVoted) {
-            return res.status(400).json({ error: "Voter not registered or already voted!" });
+        if (!voter) {
+            return res.status(400).json({ error: "Fingerprint not found. Please register first." });
+        }
+        if (voter.hasVoted) {
+            return res.status(400).json({ error: "You have already voted!" });
         }
 
         const candidate = await Candidate.findById(candidateId);
-        if (!candidate) return res.status(400).json({ error: "Candidate not found!" });
+        if (!candidate) {
+            return res.status(400).json({ error: "Invalid candidate." });
+        }
 
-        candidate.voteCount += 1;
-        await candidate.save();
+        // Mark voter as voted
         voter.hasVoted = true;
         await voter.save();
 
-        res.json({ message: "Vote cast successfully!" });
+        // Increase candidate vote count
+        candidate.voteCount += 1;
+        await candidate.save();
+
+        res.json({ message: "Vote cast successfully with fingerprint!" });
     } catch (error) {
-        console.error("Error voting:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error("Error voting with fingerprint:", error);
+        res.status(500).json({ error: "Fingerprint voting failed." });
     }
 });
+
+app.post("/voteWithMetaMask", async (req, res) => {
+    try {
+        const { walletAddress, candidateId } = req.body;
+        const voter = await Voter.findOne({ walletAddress });
+
+        if (!voter) {
+            return res.status(400).json({ error: "Wallet address not registered. Please register first." });
+        }
+        if (voter.hasVoted) {
+            return res.status(400).json({ error: "You have already voted!" });
+        }
+
+        const candidate = await Candidate.findById(candidateId);
+        if (!candidate) {
+            return res.status(400).json({ error: "Invalid candidate." });
+        }
+
+        // Mark voter as voted
+        voter.hasVoted = true;
+        await voter.save();
+
+        // Increase candidate vote count
+        candidate.voteCount += 1;
+        await candidate.save();
+
+        res.json({ message: "Vote cast successfully using MetaMask!" });
+    } catch (error) {
+        console.error("Error voting with MetaMask:", error);
+        res.status(500).json({ error: "MetaMask voting failed." });
+    }
+});
+
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
