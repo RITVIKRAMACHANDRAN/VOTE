@@ -21,18 +21,13 @@ function App() {
     // ✅ Fetch Candidates (Fixes e.map error by ensuring candidates is an array)
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get(`${SERVER_URL}/getCandidates`);
-            if (Array.isArray(response.data)) {
-                setCandidates(response.data);
-            } else {
-                setCandidates([]); // Ensures it's an empty array if response is invalid
-            }
+            const response = await axios.get("/getCandidates", { headers: { "Cache-Control": "no-cache" } });
+            setCandidates(response.data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
-            setCandidates([]); // Ensures no crash due to undefined data
         }
     };
-
+    
     // ✅ Connect MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {
