@@ -16,28 +16,25 @@ function App() {
 
     useEffect(() => {
         fetchCandidates();
-    }, []); 
+    }, []);
     
 
-    // ✅ Fetch Candidates
+    // ✅ Fetch Candidates from MongoDB
     const fetchCandidates = async () => {
-    try {
-        const response = await axios.get(`${SERVER_URL}/getCandidates`, {
-            headers: { "Accept": "application/json" }, // ✅ Ensure JSON response
-        });
-
-        console.log("Fetched Candidates (Frontend):", response.data);
-
-        if (!Array.isArray(response.data)) {
-            throw new Error("Invalid candidates data format");
+        try {
+            const response = await fetch(`${SERVER_URL}/getCandidates`);
+            const data = await response.json();
+    
+            if (!Array.isArray(data)) {
+                throw new Error("Invalid candidates data format");
+            }
+    
+            setCandidates(data); // Assuming `setCandidates` is your state updater
+        } catch (error) {
+            console.error("Error fetching candidates:", error);
         }
-
-        setCandidates(response.data); // ✅ Update candidates list in frontend
-    } catch (error) {
-        console.error("Error fetching candidates:", error);
-    }
-};
-
+    };
+    
     // ✅ Connect MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {
@@ -186,24 +183,16 @@ function App() {
                 </select>
 
                 {/* ✅ Display Candidates */}
-                <h3>Choose Candidate:</h3>
-                {candidates.length > 0 ? (
-                    <ul>
-                        {candidates.map((candidate) => (
-                            <li key={candidate._id}>
-                                <input
-                                    type="radio"
-                                    name="candidate"
-                                    value={candidate._id}
-                                    onChange={(e) => setSelectedCandidate(e.target.value)}
-                                />
-                                {candidate.name} - Votes: {candidate.voteCount}
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
+                <select onChange={(e) => setSelectedCandidate(e.target.value)}>
+    <option value="">Select Candidate</option>
+    {candidates.map((candidate) => (
+        <option key={candidate._id} value={candidate._id}>
+            {candidate.name} - Votes: {candidate.voteCount}
+        </option>
+    ))}
+</select>
                     <p>No candidates available.</p>
-                )}
+                
 
                 {/* ✅ Vote Buttons */}
                 <button onClick={voteMethod === "fingerprint" ? voteWithFingerprint : voteWithMetaMask} disabled={!selectedCandidate || !voteMethod}>

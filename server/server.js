@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const fs = require("fs");
 const path = require("path");
+const Candidate = require("./model/Candidate");
 
 dotenv.config();
 const app = express();
@@ -26,12 +27,6 @@ mongoose.connect(mongoURI, {})
 .then(() => console.log("✅ Connected to MongoDB"))
 .catch(err => console.error("❌ MongoDB connection error:", err));
 
-// Define Mongoose schemas
-const CandidateSchema = new mongoose.Schema({ name: String, voteCount: Number });
-const VoterSchema = new mongoose.Schema({ fingerprint: String, hasVoted: Boolean, walletAddress: String });
-
-const Candidate = mongoose.model("Candidate", CandidateSchema);
-const Voter = mongoose.model("Voter", VoterSchema);
 
 // ✅ Ethereum Provider & Contract
 const provider = new ethers.getDefaultProvider(process.env.RPC_URL);
@@ -67,22 +62,13 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 // ✅ Get Candidates
 app.get("/getCandidates", async (req, res) => {
     try {
-        const candidates = await Candidate.find(); // ✅ Fetch candidates from MongoDB
-        console.log("Sending candidates:", candidates);
-        res.json(candidates); // ✅ Send JSON response
+        const candidates = await Candidate.find();
+        res.json(candidates);
     } catch (error) {
         console.error("Error fetching candidates:", error);
-        res.status(500).json({ message: "Failed to fetch candidates" });
+        res.status(500).json({ error: "Server error" });
     }
 });
-
-
-// ✅ Serve React Frontend Separately
-app.use(express.static("evoting-frontend/build")); // Make sure this is correct
-app.get("*", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "evoting-frontend", "build", "index.html"));
-});
-
 // ✅ Register Voter with Fingerprint
 app.post("/registerVoterWithFingerprint", async (req, res) => {
     try {
