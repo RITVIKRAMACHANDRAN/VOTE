@@ -22,8 +22,15 @@ function App() {
     // ✅ Fetch Candidates
     const fetchCandidates = async () => {
         try {
-            const response = await axios.get(`${SERVER_URL}/getCandidates`, { headers: { "Cache-Control": "no-cache" } });
-            console.log("Fetched Candidates (Frontend):", response.data);  // Debugging log
+            const response = await axios.get(`https://vote-production-6fe3.up.railway.app//getCandidates`, {
+                headers: { "Cache-Control": "no-cache" }
+            });
+            console.log("Fetched Candidates (Frontend):", response.data);
+            
+            if (!Array.isArray(response.data)) {
+                throw new Error("Invalid candidates data format");
+            }
+    
             setCandidates(response.data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
