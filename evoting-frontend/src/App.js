@@ -21,24 +21,23 @@ function App() {
 
     // ✅ Fetch Candidates
     const fetchCandidates = async () => {
-        try {
-            const response = await axios.get(`${SERVER_URL}/getCandidates`, {
-                headers: { "Accept": "application/json" }, // Ensure JSON response
-            });
-    
-            console.log("Fetched Candidates (Frontend):", response.data);
-    
-            if (!Array.isArray(response.data)) {
-                throw new Error("Invalid candidates data format");
-            }
-    
-            setCandidates(response.data);
-        } catch (error) {
-            console.error("Error fetching candidates:", error);
+    try {
+        const response = await axios.get(`${SERVER_URL}/getCandidates`, {
+            headers: { "Accept": "application/json" }, // ✅ Ensure JSON response
+        });
+
+        console.log("Fetched Candidates (Frontend):", response.data);
+
+        if (!Array.isArray(response.data)) {
+            throw new Error("Invalid candidates data format");
         }
-    };
-    
-    
+
+        setCandidates(response.data); // ✅ Update candidates list in frontend
+    } catch (error) {
+        console.error("Error fetching candidates:", error);
+    }
+};
+
     // ✅ Connect MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {

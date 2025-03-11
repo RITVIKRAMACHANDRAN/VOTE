@@ -67,14 +67,15 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 // ✅ Get Candidates
 app.get("/getCandidates", async (req, res) => {
     try {
-        const candidates = await Candidate.find(); // ✅ Fetch from MongoDB
+        const candidates = await Candidate.find(); // ✅ Fetch candidates from MongoDB
         console.log("Sending candidates:", candidates);
-        res.json(candidates); // ✅ Send JSON
+        res.json(candidates); // ✅ Send JSON response
     } catch (error) {
         console.error("Error fetching candidates:", error);
         res.status(500).json({ message: "Failed to fetch candidates" });
     }
 });
+
 
 // ✅ Serve React Frontend Separately
 app.use(express.static("evoting-frontend/build")); // Make sure this is correct
