@@ -2,43 +2,26 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Web3 from "web3";
 
-const SERVER_URL = ""; // ✅ Replace with deployed backend URL
-const CONTRACT_ADDRESS = "0xcC9B2454F7bcC009b2696Af9De6D745307aB3A49"; // ✅ Replace with deployed contract
-const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69a76b7D"; // ✅ Replace with Admin's MetaMask Address
+const SERVER_URL = ""; // ✅ Replace with your Railway backend URL
+const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // ✅ Set Admin MetaMask Address
 
 function App() {
-    const [candidates, setCandidates] = useState([]);
-    const [candidateName, setCandidateName] = useState("");
     const [walletAddress, setWalletAddress] = useState("");
-    const [selectedCandidate, setSelectedCandidate] = useState("");
+    const [candidateName, setCandidateName] = useState("");
     const [voteMethod, setVoteMethod] = useState("");
     const [fingerprintCredential, setFingerprintCredential] = useState(null);
+    const [adminMode, setAdminMode] = useState(false);
 
+    // ✅ Check if Admin
     useEffect(() => {
-        fetchCandidates();
-    }, []);
-    
-
-    // ✅ Fetch Candidates from MongoDB
-    const fetchCandidates = async () => {
-        try {
-            const response = await fetch(`${SERVER_URL}/getCandidates`);
-            
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            
-            const data = await response.json();
-            
-            if (!Array.isArray(data)) {
-                throw new Error("Invalid candidates data format");
-            }
-    
-            setCandidates(data);
-        } catch (error) {
-            console.error("Error fetching candidates:", error);
+        if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+            setAdminMode(true);
+        } else {
+            setAdminMode(false);
         }
-    };
-        
-    // ✅ Connect MetaMask
+    }, [walletAddress]);
+
+    // ✅ Connect to MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {
             const web3 = new Web3(window.ethereum);
@@ -51,156 +34,99 @@ function App() {
                 console.error("MetaMask connection failed:", error);
             }
         } else {
-            alert("MetaMask is not installed. Please install MetaMask.");
+            alert("MetaMask is not installed.");
         }
     };
 
-    // ✅ Register Fingerprint using WebAuthn API
+    // ✅ Register Fingerprint
     const registerFingerprint = async () => {
         try {
-            if (!window.PublicKeyCredential) {
-                alert("WebAuthn is not supported in this browser.");
-                return;
-            }
-
-            const publicKey = {
-                challenge: new Uint8Array(32),
-                rp: { name: "E-Voting System" },
-                user: {
-                    id: new Uint8Array(16),
-                    name: walletAddress || "anonymous",
-                    displayName: walletAddress || "anonymous",
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: new Uint8Array(32),
+                    user: { id: new Uint8Array(16), name: walletAddress },
                 },
-                pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                authenticatorSelection: { authenticatorAttachment: "platform" },
-                timeout: 60000,
-                attestation: "direct",
-            };
+            });
 
-            const credential = await navigator.credentials.create({ publicKey });
             setFingerprintCredential(credential);
 
             await axios.post(`${SERVER_URL}/registerVoterWithFingerprint`, {
-                fingerprintCredential: JSON.stringify(credential),
-                walletAddress
+                fingerprint: JSON.stringify(credential),
+                walletAddress,
             });
 
             alert("Fingerprint registered successfully!");
         } catch (error) {
-            console.error("Error registering fingerprint:", error);
             alert("Fingerprint registration failed.");
         }
     };
 
-    // ✅ Authenticate & Vote Using Fingerprint
-    const voteWithFingerprint = async () => {
+    // ✅ Add Candidate (Admin Only)
+    const addCandidate = async () => {
+        if (!candidateName) return alert("Enter a candidate's name first!");
         try {
-            if (!window.PublicKeyCredential) {
-                alert("WebAuthn is not supported in this browser.");
-                return;
-            }
-
-            if (!selectedCandidate) {
-                alert("Select a candidate first!");
-                return;
-            }
-
-            const publicKey = {
-                challenge: new Uint8Array(32),
-                allowCredentials: [{ id: fingerprintCredential.rawId, type: "public-key" }],
-                timeout: 60000,
-            };
-
-            const assertion = await navigator.credentials.get({ publicKey });
-
-            await axios.post(`${SERVER_URL}/voteWithFingerprint`, {
-                fingerprintCredential: JSON.stringify(assertion),
-                candidateId: selectedCandidate
+            const response = await axios.post(`${SERVER_URL}/addCandidate`, {
+                name: candidateName,
+                walletAddress,
             });
-
-            alert("Vote cast successfully with fingerprint!");
+            alert(response.data.message);
+            setCandidateName(""); // Clear input
         } catch (error) {
-            console.error("Error voting with fingerprint:", error);
-            alert("Fingerprint authentication failed.");
+            alert("Error adding candidate.");
         }
     };
 
-    // ✅ Vote Using MetaMask
-    const voteWithMetaMask = async () => {
+    // ✅ Vote
+    const vote = async () => {
         try {
-            if (!selectedCandidate) {
-                alert("Select a candidate first!");
-                return;
+            if (!candidateName) return alert("Enter a candidate's name first!");
+
+            const data = { candidateName, method: voteMethod };
+
+            if (voteMethod === "fingerprint") {
+                const assertion = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32) } });
+                data.fingerprint = JSON.stringify(assertion);
+            } else if (voteMethod === "metamask") {
+                data.walletAddress = walletAddress;
             }
 
-            if (!walletAddress) {
-                alert("Connect MetaMask first");
-                return;
-            }
-
-            await axios.post(`${SERVER_URL}/voteWithMetaMask`, { walletAddress, candidateId: selectedCandidate });
-            alert("Vote cast successfully using MetaMask!");
+            await axios.post(`${SERVER_URL}/vote`, data);
+            alert("Vote cast successfully!");
         } catch (error) {
-            console.error("Error voting with MetaMask:", error);
             alert("Voting failed.");
         }
     };
 
     return (
-        <div>
+        <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
             <button onClick={connectMetaMask}>Connect MetaMask</button>
+            <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
 
-            {/* ✅ Admin Panel (Only for Admin) */}
-            {walletAddress?.toLowerCase() === ADMIN_ADDRESS.toLowerCase() && (
-                <div>
+            {/* ✅ Admin Panel - Only Visible to Admin */}
+            {adminMode && (
+                <div style={{ border: "1px solid black", padding: "10px", marginTop: "20px" }}>
                     <h2>Admin Panel</h2>
-                    <input type="text" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} placeholder="Candidate Name" />
-                    <button onClick={async () => {
-                        try {
-                            await axios.post(`${SERVER_URL}/addCandidate`, { name: candidateName, walletAddress });
-                            alert("Candidate added successfully!");
-                            setCandidateName("");
-                            fetchCandidates();
-                        } catch (error) {
-                            console.error("Error adding candidate:", error);
-                        }
-                    }}>Add Candidate</button>
+                    <input type="text" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} placeholder="Enter Candidate Name" />
+                    <button onClick={addCandidate}>Add Candidate</button>
                 </div>
             )}
 
-            {/* ✅ Voter Registration */}
-            <div>
-                <h2>Voter Registration</h2>
-                <button onClick={registerFingerprint}>Register Fingerprint</button>
+            {/* ✅ Voter Panel */}
+            <div style={{ border: "1px solid black", padding: "10px", marginTop: "20px" }}>
+                <h2>Vote</h2>
+                <input type="text" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} placeholder="Enter Candidate Name" />
+                <div>
+                    <button onClick={() => setVoteMethod("fingerprint")}>Vote with Fingerprint</button>
+                    <button onClick={() => setVoteMethod("metamask")}>Vote with MetaMask</button>
+                </div>
+                <button onClick={vote} style={{ marginTop: "10px" }}>Submit Vote</button>
             </div>
 
-            {/* ✅ Voting Section */}
-            <div>
-                <h2>Vote</h2>
-                <label>Select Voting Method:</label>
-                <select value={voteMethod} onChange={(e) => setVoteMethod(e.target.value)}>
-                    <option value="">Choose</option>
-                    <option value="fingerprint">Fingerprint</option>
-                    <option value="metamask">MetaMask</option>
-                </select>
-
-                {/* ✅ Display Candidates */}
-                <select onChange={(e) => setSelectedCandidate(e.target.value)}>
-    <option value="">Select Candidate</option>
-    {candidates.map((candidate) => (
-        <option key={candidate._id} value={candidate._id}>
-            {candidate.name} - Votes: {candidate.voteCount}
-        </option>
-    ))}
-</select>
-                    <p>No candidates available.</p>
-                
-
-                {/* ✅ Vote Buttons */}
-                <button onClick={voteMethod === "fingerprint" ? voteWithFingerprint : voteWithMetaMask} disabled={!selectedCandidate || !voteMethod}>
-                    Vote
-                </button>
+            {/* ✅ Fingerprint Registration */}
+            <div style={{ marginTop: "20px" }}>
+                <h2>Register Fingerprint</h2>
+                <button onClick={registerFingerprint}>Register Fingerprint</button>
             </div>
         </div>
     );

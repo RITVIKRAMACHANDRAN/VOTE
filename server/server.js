@@ -7,6 +7,7 @@ const dotenv = require("dotenv");
 const fs = require("fs");
 const path = require("path");
 const Candidate = require("./model/Candidate");
+const Voter = require("./model/Voter");
 
 dotenv.config();
 const app = express();
@@ -43,11 +44,15 @@ const isAdmin = (req, res, next) => {
     }
     next();
 };
-// ✅ Add Candidate
+
+// ✅ Add Candidate (Only Admin)
 app.post("/addCandidate", isAdmin, async (req, res) => {
     try {
         const { name } = req.body;
         if (!name) return res.status(400).json({ message: "Candidate name is required." });
+
+        const existingCandidate = await Candidate.findOne({ name });
+        if (existingCandidate) return res.status(400).json({ message: "Candidate already exists." });
 
         const newCandidate = new Candidate({ name, voteCount: 0 });
         await newCandidate.save();
@@ -59,21 +64,14 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
 
-// ✅ Get Candidates
-app.get("/getCandidates", async (req, res) => {
-    try {
-        const candidates = await Candidate.find(); // Fetch from MongoDB
-        res.json(candidates); // ✅ Ensure response is in JSON format
-    } catch (error) {
-        res.status(500).json({ error: "Failed to fetch candidates" });
-    }
-});
-
 // ✅ Register Voter with Fingerprint
 app.post("/registerVoterWithFingerprint", async (req, res) => {
     try {
         const { fingerprint, walletAddress } = req.body;
         if (!fingerprint) return res.status(400).json({ error: "Fingerprint is required." });
+
+        const existingVoter = await Voter.findOne({ fingerprint });
+        if (existingVoter) return res.status(400).json({ error: "Fingerprint already registered!" });
 
         const newVoter = new Voter({ fingerprint, walletAddress, hasVoted: false });
         await newVoter.save();
@@ -85,25 +83,31 @@ app.post("/registerVoterWithFingerprint", async (req, res) => {
     }
 });
 
-// ✅ Vote Using Fingerprint
-app.post("/voteWithFingerprint", async (req, res) => {
+// ✅ Vote Using Fingerprint or MetaMask
+app.post("/vote", async (req, res) => {
     try {
-        const { fingerprint, candidateId } = req.body;
-        const voter = await Voter.findOne({ fingerprint });
+        const { candidateName, fingerprint, walletAddress, method } = req.body;
 
-        if (!voter) return res.status(400).json({ error: "Fingerprint not registered." });
-        if (voter.hasVoted) return res.status(400).json({ error: "You have already voted!" });
+        if (!candidateName) return res.status(400).json({ error: "Candidate name is required." });
 
-        const candidate = await Candidate.findById(candidateId);
-        if (!candidate) return res.status(400).json({ error: "Invalid candidate." });
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) return res.status(400).json({ error: "Candidate not found!" });
 
-        voter.hasVoted = true;
-        await voter.save();
+        if (method === "fingerprint") {
+            const voter = await Voter.findOne({ fingerprint });
+            if (!voter) return res.status(400).json({ error: "Fingerprint not registered." });
+            if (voter.hasVoted) return res.status(400).json({ error: "You have already voted!" });
+
+            voter.hasVoted = true;
+            await voter.save();
+        } else if (method === "metamask") {
+            if (!walletAddress) return res.status(400).json({ error: "Wallet address required for MetaMask voting." });
+        }
 
         candidate.voteCount += 1;
         await candidate.save();
 
-        res.json({ message: "Vote cast successfully with fingerprint!" });
+        res.json({ message: "Vote cast successfully!" });
     } catch (error) {
         console.error("Error voting:", error);
         res.status(500).json({ error: "Voting failed." });
@@ -111,3 +115,4 @@ app.post("/voteWithFingerprint", async (req, res) => {
 });
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
+
