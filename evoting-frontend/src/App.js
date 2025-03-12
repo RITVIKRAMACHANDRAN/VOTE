@@ -77,8 +77,10 @@ function App() {
             alert("Error adding candidate.");
         }
     };
- // ✅ Vote with Fingerprint
- const voteWithFingerprint = async () => {
+
+
+  // ✅ Vote with Fingerprint 
+  const voteWithFingerprint = async () => {
     try {
         const fingerprintAuth = await navigator.credentials.get({
             publicKey: {
@@ -95,8 +97,7 @@ function App() {
         setMessage("Error voting. Make sure fingerprint is registered and candidate exists.");
     }
 };
-
-    return (
+return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
             <button onClick={connectMetaMask}>Connect MetaMask</button>

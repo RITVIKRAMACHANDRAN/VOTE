@@ -83,7 +83,6 @@ app.post("/registerFingerprint", async (req, res) => {
         res.status(500).json({ message: "Error registering voter", error });
     }
 });
-// ✅ Vote with Fingerprint
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { fingerprint, candidateName } = req.body;
@@ -91,6 +90,7 @@ app.post("/voteWithFingerprint", async (req, res) => {
             return res.status(400).json({ message: "Fingerprint and candidate name required" });
         }
 
+        // Check if fingerprint exists in MongoDB
         const voter = await Voter.findOne({ fingerprint });
         if (!voter) {
             return res.status(400).json({ message: "Fingerprint not registered!" });
