@@ -38,22 +38,25 @@ function App() {
     };
 
     // ✅ Register Fingerprint Before Voting
+    // ✅ Register Fingerprint using WebAuthn (Mobile Fingerprint)
     const registerFingerprint = async () => {
         try {
-            const assertion = await navigator.credentials.create({
-                publicKey: { challenge: new Uint8Array(32) }
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: new Uint8Array(32),
+                    rp: { name: "E-Voting System" },
+                    user: { id: new Uint8Array(16), name: "Voter", displayName: "Voter" },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000,
+                },
             });
 
-            setFingerprintData(JSON.stringify(assertion));
-
-            await axios.post(`${SERVER_URL}/registerVoterWithFingerprint`, {
-                fingerprint: JSON.stringify(assertion),
-                walletAddress
-            });
-
+            setFingerprintCredential(credential);
             alert("Fingerprint registered successfully!");
         } catch (error) {
-            alert("Fingerprint registration failed.");
+            console.error("Fingerprint registration failed:", error);
+            alert("Fingerprint registration failed!");
         }
     };
 
@@ -74,22 +77,19 @@ function App() {
     };
 
     // ✅ Vote with Fingerprint or MetaMask
-    const vote = async () => {
+    // ✅ Vote using Fingerprint (WebAuthn)
+    const voteWithFingerprint = async () => {
+        if (!fingerprintCredential) return alert("Register your fingerprint first!");
+
         try {
-            if (!candidateName) return alert("Enter a candidate's name first!");
-
-            const data = { candidateName, method: voteMethod };
-
-            if (voteMethod === "fingerprint") {
-                data.fingerprint = fingerprintData;
-            } else if (voteMethod === "metamask") {
-                data.walletAddress = walletAddress;
-            }
-
-            await axios.post(`${SERVER_URL}/vote`, data);
-            alert("Vote cast successfully!");
+            const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, {
+                candidateName: selectedCandidate,
+                fingerprint: JSON.stringify(fingerprintCredential),
+            });
+            alert(response.data.message);
         } catch (error) {
-            alert("Voting failed.");
+            console.error("Error voting with fingerprint:", error);
+            alert("Voting failed!");
         }
     };
 
@@ -123,7 +123,6 @@ function App() {
                 placeholder="Enter Candidate Name"
             />
             <button onClick={() => setVoteMethod("fingerprint")}>Vote with Fingerprint</button>
-            <button onClick={() => setVoteMethod("metamask")}>Vote with MetaMask</button>
         </div>
     );
 }

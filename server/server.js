@@ -110,37 +110,5 @@ app.post("/voteWithFingerprint", async (req, res) => {
 });
 
 
-// ✅ Vote using MetaMask
-app.post("/voteWithMetaMask", async (req, res) => {
-    try {
-        const { walletAddress, candidateName } = req.body;
-
-        // Check if candidate exists
-        const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) return res.status(400).json({ error: "Candidate not found!" });
-
-        // Check if the voter has already voted
-        const existingVoter = await Voter.findOne({ fingerprint: walletAddress });
-        if (existingVoter && existingVoter.hasVoted) {
-            return res.status(400).json({ error: "You have already voted!" });
-        }
-
-        // Register the voter with wallet address as fingerprint (for uniqueness)
-        const voter = existingVoter || new Voter({ fingerprint: walletAddress, hasVoted: false });
-
-        // Cast vote
-        candidate.voteCount += 1;
-        voter.hasVoted = true;
-        await candidate.save();
-        await voter.save();
-
-        return res.json({ message: "Vote cast successfully with MetaMask!" });
-
-    } catch (error) {
-        res.status(500).json({ error: "Voting failed." });
-    }
-});
-
-
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 
