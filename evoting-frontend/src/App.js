@@ -23,18 +23,21 @@ function App() {
     const fetchCandidates = async () => {
         try {
             const response = await fetch(`${SERVER_URL}/getCandidates`);
+            
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+            
             const data = await response.json();
-    
+            
             if (!Array.isArray(data)) {
                 throw new Error("Invalid candidates data format");
             }
     
-            setCandidates(data); // Assuming `setCandidates` is your state updater
+            setCandidates(data);
         } catch (error) {
             console.error("Error fetching candidates:", error);
         }
     };
-    
+        
     // ✅ Connect MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {

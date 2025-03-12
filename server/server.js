@@ -62,13 +62,13 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 // ✅ Get Candidates
 app.get("/getCandidates", async (req, res) => {
     try {
-        const candidates = await Candidate.find();
-        res.json(candidates);
+        const candidates = await Candidate.find(); // Fetch from MongoDB
+        res.json(candidates); // ✅ Ensure response is in JSON format
     } catch (error) {
-        console.error("Error fetching candidates:", error);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: "Failed to fetch candidates" });
     }
 });
+
 // ✅ Register Voter with Fingerprint
 app.post("/registerVoterWithFingerprint", async (req, res) => {
     try {
