@@ -64,48 +64,55 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
  
-// ✅ Register Voter with Fingerprint
-app.post("/registerVoterWithFingerprint", async (req, res) => {
+app.post("/registerFingerprint", async (req, res) => {
     try {
-        const { fingerprint, walletAddress } = req.body;
+        const { voterName, fingerprint } = req.body;
+        if (!voterName || !fingerprint) {
+            return res.status(400).json({ message: "Voter name and fingerprint required" });
+        }
 
-        // Check if fingerprint is already registered
         const existingVoter = await Voter.findOne({ fingerprint });
-        if (existingVoter) return res.status(400).json({ error: "Fingerprint already registered!" });
+        if (existingVoter) {
+            return res.status(400).json({ message: "Fingerprint already registered!" });
+        }
 
-        // Register new voter
-        const voter = new Voter({ fingerprint, walletAddress, hasVoted: false });
-        await voter.save();
-
-        res.json({ message: "Voter registered successfully with fingerprint!" });
+        const newVoter = new Voter({ voterName, fingerprint, hasVoted: false });
+        await newVoter.save();
+        res.json({ message: "Voter registered successfully!" });
     } catch (error) {
-        res.status(500).json({ error: "Failed to register fingerprint." });
+        res.status(500).json({ message: "Error registering voter", error });
     }
 });
-// ✅ Vote using Fingerprint
+// ✅ Vote with Fingerprint
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
-        const { candidateName, fingerprint } = req.body;
+        const { fingerprint, candidateName } = req.body;
+        if (!fingerprint || !candidateName) {
+            return res.status(400).json({ message: "Fingerprint and candidate name required" });
+        }
 
-        // Check if candidate exists
-        const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) return res.status(400).json({ error: "Candidate not found!" });
-
-        // Verify voter using fingerprint
         const voter = await Voter.findOne({ fingerprint });
-        if (!voter) return res.status(400).json({ error: "Fingerprint not registered!" });
-        if (voter.hasVoted) return res.status(400).json({ error: "You have already voted!" });
+        if (!voter) {
+            return res.status(400).json({ message: "Fingerprint not registered!" });
+        }
 
-        // Update vote count and mark voter as voted
+        if (voter.hasVoted) {
+            return res.status(400).json({ message: "You have already voted!" });
+        }
+
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) {
+            return res.status(400).json({ message: "Candidate not found!" });
+        }
+
         candidate.voteCount += 1;
         voter.hasVoted = true;
         await candidate.save();
         await voter.save();
 
-        return res.json({ message: "Vote cast successfully with fingerprint!" });
-
+        res.json({ message: "Vote cast successfully!" });
     } catch (error) {
-        res.status(500).json({ error: "Voting failed." });
+        res.status(500).json({ message: "Error casting vote", error });
     }
 });
 

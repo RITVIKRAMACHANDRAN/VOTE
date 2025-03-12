@@ -13,6 +13,9 @@ function App() {
     const [fingerprintData, setFingerprintData] = useState(null);
     const [adminMode, setAdminMode] = useState(false);
     const [fingerprintCredential, setFingerprintCredential] = useState(null);
+    const [message, setMessage] = useState("");
+    const [voterName, setVoterName] = useState("");
+    const [fingerprint, setFingerprint] = useState("");
 
     useEffect(() => {
         if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
@@ -39,29 +42,26 @@ function App() {
         }
     };
 
-    // ✅ Register Fingerprint Before Voting
-    // ✅ Register Fingerprint using WebAuthn (Mobile Fingerprint)
+    // ✅ Register Fingerprint
     const registerFingerprint = async () => {
         try {
-            const credential = await navigator.credentials.create({
+            const fingerprintData = await navigator.credentials.create({
                 publicKey: {
                     challenge: new Uint8Array(32),
                     rp: { name: "E-Voting System" },
-                    user: { id: new Uint8Array(16), name: "Voter", displayName: "Voter" },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                    timeout: 60000,
-                },
+                    user: { id: new Uint8Array(16), name: voterName, displayName: voterName },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }]
+                }
             });
 
-            setFingerprintCredential(credential);
-            alert("Fingerprint registered successfully!");
+            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintData.rawId)));
+
+            await axios.post(`${SERVER_URL}/registerFingerprint`, { voterName, fingerprint: fingerprintID });
+            setMessage("Fingerprint registered successfully!");
         } catch (error) {
-            console.error("Fingerprint registration failed:", error);
-            alert("Fingerprint registration failed!");
+            setMessage("Error registering fingerprint");
         }
     };
-
     // ✅ Add Candidate (Admin Only)
     const addCandidate = async () => {
         try {
@@ -77,23 +77,24 @@ function App() {
             alert("Error adding candidate.");
         }
     };
+ // ✅ Vote with Fingerprint
+ const voteWithFingerprint = async () => {
+    try {
+        const fingerprintAuth = await navigator.credentials.get({
+            publicKey: {
+                challenge: new Uint8Array(32),
+                allowCredentials: [{ id: Uint8Array.from(fingerprint, c => c.charCodeAt(0)), type: "public-key" }],
+            }
+        });
 
-    // ✅ Vote with Fingerprint or MetaMask
-    // ✅ Vote using Fingerprint (WebAuthn)
-    const voteWithFingerprint = async () => {
-        if (!fingerprintCredential) return alert("Register your fingerprint first!");
+        const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
 
-        try {
-            const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, {
-                candidateName: selectedCandidate,
-                fingerprint: JSON.stringify(fingerprintCredential),
-            });
-            alert(response.data.message);
-        } catch (error) {
-            console.error("Error voting with fingerprint:", error);
-            alert("Voting failed!");
-        }
-    };
+        const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
+        setMessage(response.data.message);
+    } catch (error) {
+        setMessage("Error voting. Make sure fingerprint is registered and candidate exists.");
+    }
+};
 
     return (
         <div style={{ textAlign: "center", padding: "20px" }}>
@@ -114,10 +115,17 @@ function App() {
                     <button onClick={addCandidate}>Add Candidate</button>
                 </div>
             )}
+            
+            {/* ✅ Voter Fingerprint Registration */}
+            <div>
+                <h3>Register Fingerprint</h3>
+                <input type="text" placeholder="Enter Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
+                <button onClick={registerFingerprint}>Register</button>
+            </div>
+
 
             {/* ✅ Voting Section */}
             <h2>Vote</h2>
-            <button onClick={registerFingerprint}>Register Fingerprint</button>
             <input
                 type="text"
                 value={candidateName}
