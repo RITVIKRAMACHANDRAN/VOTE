@@ -83,6 +83,7 @@ app.post("/registerFingerprint", async (req, res) => {
         res.status(500).json({ message: "Error registering voter", error });
     }
 });
+// ✅ Vote with Fingerprint (Now Works Like Registration)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { fingerprint, candidateName } = req.body;
@@ -115,7 +116,6 @@ app.post("/voteWithFingerprint", async (req, res) => {
         res.status(500).json({ message: "Error casting vote", error });
     }
 });
-
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 

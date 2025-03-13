@@ -78,25 +78,23 @@ function App() {
         }
     };
 
+    const voteWithFingerprint = async () => {
+        try {
+            const fingerprintAuth = await navigator.credentials.get({
+                publicKey: {
+                    challenge: new Uint8Array(32),
+                    allowCredentials: [{ id: Uint8Array.from(fingerprint, c => c.charCodeAt(0)), type: "public-key" }],
+                }
+            });
 
-  // ✅ Vote with Fingerprint 
-  const voteWithFingerprint = async () => {
-    try {
-        const fingerprintAuth = await navigator.credentials.get({
-            publicKey: {
-                challenge: new Uint8Array(32),
-                allowCredentials: [{ id: Uint8Array.from(fingerprint, c => c.charCodeAt(0)), type: "public-key" }],
-            }
-        });
+            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
 
-        const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
-
-        const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
-        setMessage(response.data.message);
-    } catch (error) {
-        setMessage("Error voting. Make sure fingerprint is registered and candidate exists.");
-    }
-};
+            const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
+            setMessage(response.data.message);
+        } catch (error) {
+            setMessage("❌ Error voting. Make sure fingerprint is registered and candidate exists.");
+        }
+    };
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
