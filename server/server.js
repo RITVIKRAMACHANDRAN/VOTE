@@ -63,8 +63,6 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
-
-// ✅ Register Fingerprint API (Stores in MongoDB)
 app.post("/registerFingerprint", async (req, res) => {
     try {
         const { voterName, credentialId } = req.body;

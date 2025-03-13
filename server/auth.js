@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 const SERVER_URL = ""; // ✅ Replace with your Railway backend URL
@@ -9,29 +10,29 @@ export const registerWithFingerprint = async () => {
             return;
         }
 
-        // 1️⃣ WebAuthn Registration Options
-         const publicKeyOptions = {
+        // 1️⃣ Setup WebAuthn Registration Options
+        const publicKeyOptions = {
             challenge: new Uint8Array(32), // Random challenge
-            rp: { name: "E-Voting System", id: window.location.hostname }, // Relying Party (your site)
+            rp: { name: "E-Voting System", id: window.location.hostname }, // Your site
             user: {
-                id: new Uint8Array(16), // Random User ID
+                id: new Uint8Array(16), // Unique user ID
                 name: voterName,
                 displayName: voterName,
             },
             pubKeyCredParams: [
-                { type: "public-key", alg: -7 }, // ES256
+                { type: "public-key", alg: -7 }, // ES256 (Required)
                 { type: "public-key", alg: -257 }, // RS256
             ],
-            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "preferred" },
             timeout: 60000,
             attestation: "direct",
         };
 
-        // 2️⃣ Create WebAuthn Credential
+        // 2️⃣ Request Fingerprint Registration
         const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
         const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId))); // Convert to base64
 
-        // 3️⃣ Send to Backend for Storage
+        // 3️⃣ Store in MongoDB
         const response = await fetch(`${SERVER_URL}/registerFingerprint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -52,13 +53,13 @@ export const registerWithFingerprint = async () => {
 
 export const voteWithFingerprint = async () => {
     try {
-        const candidateName = document.getElementById("candidateInput").value; // Get candidate name
+        const candidateName = document.getElementById("candidateInput").value;
         if (!candidateName) {
             alert("❌ Please enter a candidate name.");
             return;
         }
 
-        // 1️⃣ WebAuthn Authentication (Fingerprint Scan)
+        // 1️⃣ WebAuthn Authentication (Scan Fingerprint)
         const publicKeyOptions = {
             challenge: new Uint8Array(32), // Random challenge
             rpId: window.location.hostname,
@@ -70,7 +71,7 @@ export const voteWithFingerprint = async () => {
         const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
         const credentialId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))); // Convert to base64
 
-        // 2️⃣ Send Credential ID & Candidate Name to Backend
+        // 2️⃣ Send Fingerprint & Candidate Name to Backend
         const response = await fetch(`${SERVER_URL}/voteWithFingerprint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
