@@ -9,6 +9,7 @@ const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // Admin Met
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
     const [candidateName, setCandidateName] = useState("");
+    const [fingerprintId, setFingerprintId] = useState("");
     const [selectedCandidate, setSelectedCandidate] = useState("");
     const [voteMethod, setVoteMethod] = useState("");
     const [fingerprintData, setFingerprintData] = useState(null);
@@ -59,110 +60,52 @@ function App() {
             alert("Error adding candidate.");
         }
     };
-    const registerWithFingerprint = async () => {
-        try {
-            const voterName = prompt("Enter your name for fingerprint registration:");
-            if (!voterName) {
-                alert("❌ Please enter a valid name.");
-                return;
-            }
-    
-            // 1️⃣ Setup WebAuthn for Registration
-            const publicKeyOptions = {
-                challenge: new Uint8Array(32),
-                rp: { name: "E-Voting System", id: window.location.hostname },
-                user: {
-                    id: new Uint8Array(16),
-                    name: voterName,
-                    displayName: voterName,
-                },
-                pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ES256
-                authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "preferred" },
-                timeout: 60000,
-                attestation: "direct",
-            };
-    
-            // 2️⃣ Request Fingerprint Registration
-            const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
-            const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-    
-            // 3️⃣ Send Fingerprint Data to Backend
-            const response = await fetch(`${SERVER_URL}/registerFingerprint`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ voterName, credentialId }),
-            });
-    
-            const result = await response.json();
-            if (result.success) {
-                alert(result.message);
-    
-                // 4️⃣ Check voter status
-                checkVoterStatus(credentialId);
-            } else {
-                alert(result.message);
-            }
-        } catch (error) {
-            console.error("Error registering fingerprint:", error);
-            alert("❌ Registration failed. Ensure your device supports WebAuthn.");
-        }
-    };
-    
-    // Function to check voter status and allow voting if not voted
-    const checkVoterStatus = async (credentialId) => {
-        try {
-            const response = await fetch(`${SERVER_URL}/checkVoterStatus`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ credentialId }),
-            });
-    
-            const result = await response.json();
-            if (result.success) {
-                if (result.hasVoted) {
-                    alert("❌ You have already voted!");
-                } else {
-                    voteWithFingerprint(credentialId);
-                }
-            } else {
-                alert(result.message);
-            }
-        } catch (error) {
-            console.error("Error checking voter status:", error);
-            alert("❌ Server error while checking voter status.");
-        }
-    };
-    
-    // Function to vote using fingerprint
-    const voteWithFingerprint = async (credentialId) => {
-        try {
-            const candidateName = prompt("Enter the candidate name to vote for:");
-            if (!candidateName) {
-                alert("❌ Please enter a valid candidate name.");
-                return;
-            }
-    
-            const response = await fetch(`${SERVER_URL}/voteWithFingerprint`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ credentialId, candidateName }),
-            });
-    
-            const result = await response.json();
-            if (result.success) {
-                alert("✅ Vote cast successfully!");
-            } else {
-                alert(result.message);
-            }
-        } catch (error) {
-            console.error("Error voting with fingerprint:", error);
-            alert("❌ Voting failed. Ensure fingerprint authentication is enabled.");
-        }
-    };
-    
-    // UI Button
-    <button onClick={registerWithFingerprint}>Register Fingerprint (or Vote if already registered)</button>
-    
+ // **Handle Fingerprint Registration & Voting**
+ const registerAndVote = async () => {
+    if (!voterName || !candidateName) {
+      alert("Voter name and candidate name are required");
+      return;
+    }
+
+    try {
+      // **Step 1: Get fingerprint using WebAuthn API**
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge: new Uint8Array(32), // Dummy challenge
+          rp: { name: "E-Voting System" },
+          user: {
+            id: new Uint8Array(16),
+            name: voterName,
+            displayName: voterName,
+          },
+          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+          authenticatorSelection: { authenticatorAttachment: "platform" },
+          timeout: 60000,
+          attestation: "direct",
+        },
+      });
+
+      const fingerprintId = btoa(
+        String.fromCharCode(...new Uint8Array(credential.rawId))
+      ); // Encode fingerprint ID
+
+      setFingerprintId(fingerprintId);
+
+      // **Step 2: Send data to backend**
+      const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
+        voterName,
+        fingerprintId,
+        candidateName,
+      });
+
+      setMessage(response.data.message);
+      alert(response.data.message);
+    } catch (error) {
+      console.error("❌ Error registering fingerprint & voting:", error);
+      alert("Error registering fingerprint or casting vote");
+    }
+  };
+
 
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
@@ -183,25 +126,29 @@ return (
                     <button onClick={addCandidate}>Add Candidate</button>
                 </div>
             )}
-            
-            {/* ✅ Voter Fingerprint Registration */}
-            <div>
-            <h2>Register Fingerprint</h2>
-            <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-            <button onClick={() => registerWithFingerprint(voterName, setFingerprintID, setMessage)}>Register</button>
+           
+      <div>
+        <input
+          type="text"
+          placeholder="Enter Voter Name"
+          value={voterName}
+          onChange={(e) => setVoterName(e.target.value)}
+        />
+      </div>
 
-            <p>{message}</p>
-            </div>
+      <div>
+        <input
+          type="text"
+          placeholder="Enter Candidate Name"
+          value={candidateName}
+          onChange={(e) => setCandidateName(e.target.value)}
+        />
+      </div>
 
+      <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
 
-             {/* ✅ Vote with Fingerprint */}
-             <h3>Vote with Fingerprint</h3>
-    <input type="text" id="candidateInput" placeholder="Enter Candidate Name" />
-    <button onClick={voteWithFingerprint}>Vote with Fingerprint</button>
-
-            <p>{message}</p>
-        </div>
-    );
+      {message && <p>{message}</p>}
+    </div>
+  );
 }
-
 export default App;

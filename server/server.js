@@ -62,78 +62,44 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         console.error("Error adding candidate:", error);
         res.status(500).json({ message: "Internal Server Error." });
     }
-});
+});// **Register Fingerprint & Handle Voting**
 app.post("/registerFingerprint", async (req, res) => {
-    try {
-        const { voterName, credentialId } = req.body;
+  try {
+    const { voterName, fingerprintId, candidateName } = req.body;
 
-        // Check if voter is already registered
-        let voter = await Voter.findOne({ credentialId });
-        if (voter) {
-            return res.json({
-                success: true,
-                message: "✅ Fingerprint already registered!",
-                hasVoted: voter.hasVoted,
-            });
-        }
-
-        // Register new voter
-        voter = new Voter({ voterName, credentialId, hasVoted: false });
-        await voter.save();
-
-        return res.json({ success: true, message: "✅ Fingerprint registered successfully!" });
-    } catch (error) {
-        console.error("Error registering fingerprint:", error);
-        return res.status(500).json({ success: false, message: "❌ Server error while registering fingerprint." });
+    if (!voterName || !fingerprintId || !candidateName) {
+      return res.status(400).json({ error: "Voter name, fingerprint, and candidate name are required" });
     }
-});
-app.post("/checkVoterStatus", async (req, res) => {
-    try {
-        const { credentialId } = req.body;
-        const voter = await Voter.findOne({ credentialId });
 
-        if (!voter) {
-            return res.status(400).json({ success: false, message: "❌ Fingerprint not found!" });
-        }
+    let voter = await Voter.findOne({ fingerprintId });
 
-        return res.json({ success: true, hasVoted: voter.hasVoted });
-    } catch (error) {
-        console.error("Error checking voter status:", error);
-        return res.status(500).json({ success: false, message: "❌ Server error while checking voter status." });
+    if (voter) {
+      if (voter.hasVoted) {
+        return res.status(400).json({ error: "Voter has already voted" });
+      }
+    } else {
+      // Register new voter
+      voter = new Voter({ voterName, fingerprintId, hasVoted: false });
+      await voter.save();
     }
-});
-app.post("/voteWithFingerprint", async (req, res) => {
-    try {
-        const { credentialId, candidateName } = req.body;
 
-        // Check if voter exists
-        const voter = await Voter.findOne({ credentialId });
-        if (!voter) {
-            return res.status(400).json({ success: false, message: "❌ Fingerprint not found! Please register first." });
-        }
-
-        // Check if candidate exists
-        const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) {
-            return res.status(400).json({ success: false, message: "❌ Candidate not found!" });
-        }
-
-        // Check if voter has already voted
-        if (voter.hasVoted) {
-            return res.status(400).json({ success: false, message: "❌ You have already voted!" });
-        }
-
-        // Increment Vote Count & Mark Voter as Voted
-        candidate.voteCount += 1;
-        voter.hasVoted = true;
-        await candidate.save();
-        await voter.save();
-
-        return res.json({ success: true, message: "✅ Vote cast successfully!" });
-    } catch (error) {
-        console.error("Error voting with fingerprint:", error);
-        return res.status(500).json({ success: false, message: "❌ Server error while voting." });
+    const candidate = await Candidate.findOne({ name: candidateName });
+    if (!candidate) {
+      return res.status(404).json({ error: "Candidate not found" });
     }
+
+    // Cast vote
+    candidate.voteCount += 1;
+    await candidate.save();
+
+    voter.hasVoted = true;
+    await voter.save();
+
+    res.json({ message: "Fingerprint registered & vote cast successfully!", voter, candidate });
+  } catch (error) {
+    console.error("❌ Server error:", error);
+    res.status(500).json({ error: "Server error while registering fingerprint & casting vote" });
+  }
 });
 
 
