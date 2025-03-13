@@ -9,9 +9,7 @@ const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // Admin Met
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
     const [candidateName, setCandidateName] = useState("");
-    const [fingerprintId, setFingerprintId] = useState("");
     const [adminMode, setAdminMode] = useState(false);
-    const [fingerprintCredential, setFingerprintCredential] = useState(null);
     const [message, setMessage] = useState("");
     const [voterName, setVoterName] = useState("");
     
