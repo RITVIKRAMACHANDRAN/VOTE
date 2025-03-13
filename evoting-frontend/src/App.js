@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Web3 from "web3";
-import { registerFingerprint, voteWithFingerprint } from "./auth";
+import { registerWithFingerprint, voteWithFingerprint } from "./auth";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
 const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // Admin MetaMask Address
@@ -85,17 +85,16 @@ return (
             <div>
             <h2>Register Fingerprint</h2>
             <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-            <button onClick={() => registerFingerprint(voterName, setFingerprintID, setMessage)}>Register</button>
+            <button onClick={() => registerWithFingerprint(voterName, setFingerprintID, setMessage)}>Register</button>
 
             <p>{message}</p>
             </div>
 
 
              {/* ✅ Vote with Fingerprint */}
-             <h2>Vote with Fingerprint</h2>
-            <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-            <input type="text" placeholder="Candidate Name" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
-            <button onClick={() => voteWithFingerprint(voterName, candidateName, setMessage)}>Vote</button>
+             <h3>Vote with Fingerprint</h3>
+    <input type="text" id="candidateInput" placeholder="Enter Candidate Name" />
+    <button onClick={voteWithFingerprint}>Vote with Fingerprint</button>
 
             <p>{message}</p>
         </div>

@@ -1,79 +1,76 @@
 import axios from "axios";
 
 const SERVER_URL = ""; // ✅ Replace with your Railway backend URL
-
-// ✅ Function to Register Fingerprint (Stores in MongoDB)
-export const registerFingerprint = async (voterName, setFingerprintID, setMessage) => {
+export const registerWithFingerprint = async () => {
     try {
+        const voterName = prompt("Enter your name for fingerprint registration:");
         if (!voterName) {
-            setMessage("❌ Please enter your name!");
+            alert("❌ Please enter a valid name.");
             return;
         }
 
-        const publicKey = {
-            challenge: new Uint8Array(32),
-            rp: { name: "E-Voting System" },
+        // 1️⃣ WebAuthn Registration Options
+         const publicKeyOptions = {
+            challenge: new Uint8Array(32), // Random challenge
+            rp: { name: "E-Voting System", id: window.location.hostname }, // Relying Party (your site)
             user: {
-                id: new Uint8Array(16),
+                id: new Uint8Array(16), // Random User ID
                 name: voterName,
                 displayName: voterName,
             },
             pubKeyCredParams: [
-                { type: "public-key", alg: -7 },   // ✅ ES256 (Fixes error)
-                { type: "public-key", alg: -257 }  // ✅ RS256 (Ensures broad compatibility)
+                { type: "public-key", alg: -7 }, // ES256
+                { type: "public-key", alg: -257 }, // RS256
             ],
-            authenticatorSelection: {
-                userVerification: "required",
-                authenticatorAttachment: "platform",  // ✅ Ensures Mobile Fingerprint
-            },
-            timeout: 120000, // ✅ Extended timeout to avoid `NotAllowedError`
+            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+            timeout: 60000,
+            attestation: "direct",
         };
 
-        console.log("⏳ Starting fingerprint registration...");
+        // 2️⃣ Create WebAuthn Credential
+        const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
+        const credentialId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId))); // Convert to base64
 
-        const credential = await navigator.credentials.create({ publicKey });
+        // 3️⃣ Send to Backend for Storage
+        const response = await fetch(`${SERVER_URL}/registerFingerprint`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ voterName, credentialId }),
+        });
 
-        if (credential) {
-            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-            setFingerprintID(fingerprintID);
-
-            console.log("✅ Fingerprint registered");
-
-            // ✅ Store fingerprint in MongoDB
-            await axios.post(`${SERVER_URL}/registerFingerprint`, { voterName, fingerprint: fingerprintID });
-            setMessage("✅ Fingerprint registered successfully!");
+        const result = await response.json();
+        if (result.success) {
+            alert("✅ Fingerprint registered successfully!");
         } else {
-            setMessage("❌ Fingerprint registration failed!");
+            alert(result.message);
         }
     } catch (error) {
-        console.error("❌ Error registering fingerprint:", error);
-        setMessage("❌ Error registering fingerprint. Try again.");
+        console.error("Error registering fingerprint:", error);
+        alert("❌ Registration failed. Ensure your device supports WebAuthn.");
     }
 };
+
 export const voteWithFingerprint = async () => {
     try {
-        const candidateName = document.getElementById("candidateInput").value; // Get candidate name from input
-
+        const candidateName = document.getElementById("candidateInput").value; // Get candidate name
         if (!candidateName) {
             alert("❌ Please enter a candidate name.");
             return;
         }
 
-        // 1️⃣ Use WebAuthn to Authenticate with the Same Fingerprint
+        // 1️⃣ WebAuthn Authentication (Fingerprint Scan)
         const publicKeyOptions = {
-            challenge: new Uint8Array(32),
+            challenge: new Uint8Array(32), // Random challenge
             rpId: window.location.hostname,
             userVerification: "required",
-            allowCredentials: [{ type: "public-key", transports: ["internal"] }], // Ensures mobile fingerprint is used
+            allowCredentials: [{ type: "public-key", transports: ["internal"] }], // Mobile Fingerprint
             timeout: 60000,
         };
 
         const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
+        const credentialId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))); // Convert to base64
 
-        // 2️⃣ Extract credential ID
-        const credentialId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
-
-        // 3️⃣ Send to backend for verification
+        // 2️⃣ Send Credential ID & Candidate Name to Backend
         const response = await fetch(`${SERVER_URL}/voteWithFingerprint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
