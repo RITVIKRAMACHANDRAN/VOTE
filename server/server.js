@@ -8,8 +8,6 @@ const fs = require("fs");
 const path = require("path");
 const Candidate = require("./model/Candidate");
 const Voter = require("./model/Voter");
-const { registerFingerprint, authenticateFingerprint } = require("./auth"); // ✅ Import Auth Module
-
 
 dotenv.config();
 const app = express();
@@ -66,49 +64,56 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
 
-// ✅ Register Fingerprint API
 app.post("/registerFingerprint", async (req, res) => {
     try {
         const { voterName, fingerprint } = req.body;
-        if (!voterName || !fingerprint) {
-            return res.status(400).json({ message: "Voter name and fingerprint required!" });
-        }
+        if (!voterName || !fingerprint) return res.status(400).json({ message: "Voter name and fingerprint required!" });
 
         const existingVoter = await Voter.findOne({ fingerprint });
-        if (existingVoter) {
-            return res.status(400).json({ message: "Fingerprint already registered!" });
-        }
+        if (existingVoter) return res.status(400).json({ message: "Fingerprint already registered!" });
 
         const newVoter = new Voter({ voterName, fingerprint, hasVoted: false });
         await newVoter.save();
-        res.json({ message: "Fingerprint registered successfully!" });
+        res.json({ message: "✅ Fingerprint registered successfully!" });
     } catch (error) {
         console.error("Error registering fingerprint:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(400).json({ message: error.message });
+    }
+});// ✅ Fetch Voter Fingerprint API
+app.get("/getVoterFingerprint/:voterName", async (req, res) => {
+    try {
+        const voter = await Voter.findOne({ voterName });
+        if (!voter) return res.status(404).json({ message: "Voter not found!" });
+
+        res.json({ fingerprint: voter.fingerprint });
+    } catch (error) {
+        console.error("Error fetching fingerprint:", error);
+        res.status(400).json({ message: error.message });
     }
 });
 
-// ✅ Vote with Fingerprint API (Using `auth.js`)
+// ✅ Vote with Fingerprint API
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
-        const { fingerprint, candidateName } = req.body;
+        const { voterName, fingerprint, candidateName } = req.body;
 
-        // ✅ Authenticate Fingerprint
-        const voter = await authenticateFingerprint(fingerprint);
+        // ✅ Verify if fingerprint is registered in MongoDB
+        const voter = await Voter.findOne({ voterName, fingerprint });
+        if (!voter) return res.status(400).json({ message: "❌ Fingerprint not registered!" });
+
+        if (voter.hasVoted) return res.status(400).json({ message: "❌ You have already voted!" });
 
         // ✅ Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) {
-            return res.status(400).json({ message: "Candidate not found!" });
-        }
+        if (!candidate) return res.status(400).json({ message: "❌ Candidate not found!" });
 
-        // ✅ Update vote count
+        // ✅ Update vote count & prevent duplicate votes
         candidate.voteCount += 1;
         voter.hasVoted = true;
         await candidate.save();
         await voter.save();
 
-        res.json({ message: "Vote cast successfully!" });
+        res.json({ message: "✅ Vote cast successfully!" });
     } catch (error) {
         console.error("Error casting vote:", error);
         res.status(400).json({ message: error.message });

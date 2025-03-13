@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Web3 from "web3";
+import { registerFingerprint, voteWithFingerprint } from "./auth";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
 const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // Admin MetaMask Address
@@ -43,33 +44,6 @@ function App() {
         }
     };
 
-  
-    // ✅ Register Fingerprint (WebAuthn)
-    const registerFingerprint = async () => {
-        try {
-            const publicKey = {
-                challenge: new Uint8Array(32),
-                rp: { name: "E-Voting System" },
-                user: { id: new Uint8Array(16), name: voterName, displayName: voterName },
-                pubKeyCredParams: [
-                    { type: "public-key", alg: -7 },  // ES256 ✅
-                    { type: "public-key", alg: -257 } // RS256 ✅
-                ],
-                authenticatorSelection: { userVerification: "preferred" }
-            };
-
-            const fingerprintData = await navigator.credentials.create({ publicKey });
-
-            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintData.rawId)));
-            setFingerprintID(fingerprintID);
-
-            await axios.post(`${SERVER_URL}/registerFingerprint`, { voterName, fingerprint: fingerprintID });
-            setMessage("✅ Fingerprint registered successfully!");
-        } catch (error) {
-            setMessage("❌ Error registering fingerprint");
-        }
-    };
-
     // ✅ Add Candidate (Admin Only)
     const addCandidate = async () => {
         try {
@@ -86,38 +60,6 @@ function App() {
         }
     };
  
-
-
-    // ✅ WebAuthn: Vote with Fingerprint (Using New Auth)
-    const voteWithFingerprint = async () => {
-        try {
-            if (!candidateName) {
-                setMessage("❌ Please enter a candidate name.");
-                return;
-            }
-
-            const publicKey = {
-                challenge: new Uint8Array(32),
-                allowCredentials: [{
-                    id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), 
-                    type: "public-key",
-                }],
-                timeout: 60000,
-            };
-
-            const assertion = await navigator.credentials.get({ publicKey });
-
-            if (assertion) {
-                const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
-                setMessage(response.data.message);
-            } else {
-                setMessage("❌ Fingerprint verification failed!");
-            }
-        } catch (error) {
-            console.error("Error voting with fingerprint:", error);
-            setMessage("❌ Error voting!");
-        }
-    };
 
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
@@ -147,15 +89,13 @@ return (
             </div>
 
 
-            {/* ✅ Voting Section */}
-            <h2>Vote</h2>
-            <input
-                type="text"
-                value={candidateName}
-                onChange={(e) => setCandidateName(e.target.value)}
-                placeholder="Enter Candidate Name"
-            />
-            <button onClick={() => setVoteMethod("fingerprint")}>Vote with Fingerprint</button>
+             {/* ✅ Vote with Fingerprint */}
+             <h2>Vote</h2>
+            <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
+            <input type="text" placeholder="Candidate Name" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
+            <button onClick={() => voteWithFingerprint(voterName, candidateName, setMessage)}>Vote with Fingerprint</button>
+
+            <p>{message}</p>
         </div>
     );
 }
