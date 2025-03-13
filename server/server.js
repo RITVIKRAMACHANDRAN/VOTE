@@ -66,14 +66,14 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 });
 app.post("/registerFingerprint", async (req, res) => {
     try {
-      const { voterName, fingerprint, candidateName } = req.body;
+      const { voterName, fingerprintId, candidateName } = req.body;
   
-      if (!voterName || !fingerprint || !candidateName) {
+      if (!voterName || !fingerprintId || !candidateName) {
         return res.status(400).json({ message: "All fields are required." });
       }
   
-      // Check if voter is already registered
-      let voter = await Voter.findOne({ fingerprint });
+      // Check if the voter is already registered
+      let voter = await Voter.findOne({ fingerprintId });
   
       if (voter) {
         if (voter.hasVoted) {
@@ -81,7 +81,7 @@ app.post("/registerFingerprint", async (req, res) => {
         }
       } else {
         // Register new voter
-        voter = new Voter({ voterName, fingerprint, hasVoted: false });
+        voter = new Voter({ voterName, fingerprintId, hasVoted: false });
         await voter.save();
       }
   
@@ -102,10 +102,13 @@ app.post("/registerFingerprint", async (req, res) => {
   
       res.json({ message: "✅ Vote cast successfully!" });
     } catch (error) {
-      console.error("❌ Server error while registering fingerprint & updating vote count:", error);
+      console.error(
+        "❌ Server error while registering fingerprint & updating vote count:",
+        error
+      );
       res.status(500).json({ message: "Server error during voting process." });
     }
   });
-   
+  
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));

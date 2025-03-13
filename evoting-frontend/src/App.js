@@ -63,34 +63,36 @@ function App() {
       
         try {
           // WebAuthn API to register fingerprint
-          const publicKey = {
-            challenge: new Uint8Array(32),
-            rp: { name: "E-Voting System" },
-            user: {
-              id: new Uint8Array(16),
-              name: voterName,
-              displayName: voterName,
+          const credential = await navigator.credentials.create({
+            publicKey: {
+              challenge: new Uint8Array(32),
+              rp: { name: "E-Voting System" },
+              user: {
+                id: new Uint8Array(16),
+                name: voterName,
+                displayName: voterName,
+              },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+              authenticatorSelection: { authenticatorAttachment: "platform" },
+              timeout: 60000,
+              attestation: "direct",
             },
-            pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-            authenticatorSelection: { authenticatorAttachment: "platform" },
-            timeout: 60000,
-            attestation: "direct",
-          };
+          });
       
-          const credential = await navigator.credentials.create({ publicKey });
-      
-          if (!credential) {
+          if (!credential || !credential.rawId) {
             alert("Fingerprint registration failed.");
             return;
           }
       
-          // Convert fingerprint ID properly
-          const fingerprint = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+          // Convert fingerprint ID to Base64
+          const fingerprintId = btoa(
+            String.fromCharCode(...new Uint8Array(credential.rawId))
+          );
       
-          // Send voter name, fingerprint, and candidate name to backend
+          // Send voter name, fingerprint ID, and candidate name to backend
           const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
             voterName,
-            fingerprint,
+            fingerprintId, // Ensure this matches the backend schema
             candidateName,
           });
       
@@ -102,8 +104,6 @@ function App() {
         }
       };
       
-
-
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
