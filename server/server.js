@@ -67,15 +67,19 @@ app.post("/registerFingerprint", async (req, res) => {
     try {
         const { voterName, credentialId } = req.body;
 
-        // Check if fingerprint is already registered
-        const existingVoter = await Voter.findOne({ credentialId });
-        if (existingVoter) {
-            return res.status(400).json({ success: false, message: "❌ Fingerprint already registered!" });
+        // Check if voter is already registered
+        let voter = await Voter.findOne({ credentialId });
+        if (voter) {
+            return res.json({
+                success: true,
+                message: "✅ Fingerprint already registered!",
+                hasVoted: voter.hasVoted,
+            });
         }
 
-        // Store new voter in MongoDB
-        const newVoter = new Voter({ voterName, credentialId, hasVoted: false });
-        await newVoter.save();
+        // Register new voter
+        voter = new Voter({ voterName, credentialId, hasVoted: false });
+        await voter.save();
 
         return res.json({ success: true, message: "✅ Fingerprint registered successfully!" });
     } catch (error) {
@@ -83,28 +87,43 @@ app.post("/registerFingerprint", async (req, res) => {
         return res.status(500).json({ success: false, message: "❌ Server error while registering fingerprint." });
     }
 });
+app.post("/checkVoterStatus", async (req, res) => {
+    try {
+        const { credentialId } = req.body;
+        const voter = await Voter.findOne({ credentialId });
+
+        if (!voter) {
+            return res.status(400).json({ success: false, message: "❌ Fingerprint not found!" });
+        }
+
+        return res.json({ success: true, hasVoted: voter.hasVoted });
+    } catch (error) {
+        console.error("Error checking voter status:", error);
+        return res.status(500).json({ success: false, message: "❌ Server error while checking voter status." });
+    }
+});
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { credentialId, candidateName } = req.body;
 
-        // 1️⃣ Check if voter exists in MongoDB
+        // Check if voter exists
         const voter = await Voter.findOne({ credentialId });
         if (!voter) {
             return res.status(400).json({ success: false, message: "❌ Fingerprint not found! Please register first." });
         }
 
-        // 2️⃣ Check if candidate exists
+        // Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
         if (!candidate) {
             return res.status(400).json({ success: false, message: "❌ Candidate not found!" });
         }
 
-        // 3️⃣ Check if voter has already voted
+        // Check if voter has already voted
         if (voter.hasVoted) {
             return res.status(400).json({ success: false, message: "❌ You have already voted!" });
         }
 
-        // 4️⃣ Increment Vote Count & Mark Voter as Voted
+        // Increment Vote Count & Mark Voter as Voted
         candidate.voteCount += 1;
         voter.hasVoted = true;
         await candidate.save();
