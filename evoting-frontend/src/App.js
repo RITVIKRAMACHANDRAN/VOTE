@@ -10,15 +10,12 @@ function App() {
     const [walletAddress, setWalletAddress] = useState("");
     const [candidateName, setCandidateName] = useState("");
     const [fingerprintId, setFingerprintId] = useState("");
-    const [selectedCandidate, setSelectedCandidate] = useState("");
-    const [voteMethod, setVoteMethod] = useState("");
-    const [fingerprintData, setFingerprintData] = useState(null);
     const [adminMode, setAdminMode] = useState(false);
     const [fingerprintCredential, setFingerprintCredential] = useState(null);
     const [message, setMessage] = useState("");
     const [voterName, setVoterName] = useState("");
-    const [fingerprint, setFingerprint] = useState("");
-    const [fingerprintID, setFingerprintID] = useState("");
+    
+ 
 
     useEffect(() => {
         if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
@@ -60,51 +57,45 @@ function App() {
             alert("Error adding candidate.");
         }
     };
- // **Handle Fingerprint Registration & Voting**
- const registerAndVote = async () => {
-    if (!voterName || !candidateName) {
-      alert("Voter name and candidate name are required");
-      return;
-    }
-
-    try {
-      // **Step 1: Get fingerprint using WebAuthn API**
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: new Uint8Array(32), // Dummy challenge
-          rp: { name: "E-Voting System" },
-          user: {
-            id: new Uint8Array(16),
-            name: voterName,
-            displayName: voterName,
-          },
-          pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-          authenticatorSelection: { authenticatorAttachment: "platform" },
-          timeout: 60000,
-          attestation: "direct",
-        },
-      });
-
-      const fingerprintId = btoa(
-        String.fromCharCode(...new Uint8Array(credential.rawId))
-      ); // Encode fingerprint ID
-
-      setFingerprintId(fingerprintId);
-
-      // **Step 2: Send data to backend**
-      const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
-        voterName,
-        fingerprintId,
-        candidateName,
-      });
-
-      setMessage(response.data.message);
-      alert(response.data.message);
-    } catch (error) {
-      console.error("❌ Error registering fingerprint & voting:", error);
-      alert("Error registering fingerprint or casting vote");
-    }
-  };
+    const registerAndVote = async () => {
+        if (!voterName || !candidateName) {
+          alert("Voter name and candidate name are required");
+          return;
+        }
+      
+        try {
+          const credential = await navigator.credentials.create({
+            publicKey: {
+              challenge: new Uint8Array(32),
+              rp: { name: "E-Voting System" },
+              user: {
+                id: new Uint8Array(16),
+                name: voterName,
+                displayName: voterName,
+              },
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+              authenticatorSelection: { authenticatorAttachment: "platform" },
+              timeout: 60000,
+              attestation: "direct",
+            },
+          });
+      
+          const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+      
+          const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
+            voterName,
+            fingerprintId,
+            candidateName,
+          });
+      
+          setMessage(response.data.message);
+          alert(response.data.message);
+        } catch (error) {
+          console.error("❌ Error registering fingerprint & voting:", error);
+          alert("Error registering fingerprint or casting vote");
+        }
+      };
+      
 
 
 return (

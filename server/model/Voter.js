@@ -1,9 +1,11 @@
 const mongoose = require("mongoose");
 
 const VoterSchema = new mongoose.Schema({
-    fingerprint: { type: String, required: true, unique: true }, // Unique fingerprint
-    walletAddress: { type: String, unique: true }, // Optional MetaMask Address
-    hasVoted: { type: Boolean, default: false }, // Prevents double voting
+  voterName: { type: String, required: true },
+  fingerprintId: { type: String, required: true }, // ✅ Ensure this matches the frontend
+  hasVoted: { type: Boolean, default: false },
+  candidateName: { type: String },
 });
 
-module.exports = mongoose.model("Voter", VoterSchema);
+const Voter = mongoose.model("Voter", VoterSchema);
+module.exports = Voter;
