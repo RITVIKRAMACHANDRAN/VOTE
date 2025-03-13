@@ -64,7 +64,8 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
 
-// ✅ Vote with Fingerprint (Now Works Like Registration)
+
+// ✅ Vote with Fingerprint API
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { fingerprint, candidateName } = req.body;
@@ -72,6 +73,7 @@ app.post("/voteWithFingerprint", async (req, res) => {
             return res.status(400).json({ message: "Fingerprint and candidate name required" });
         }
 
+        // Check if fingerprint exists in DB
         const voter = await Voter.findOne({ fingerprint });
         if (!voter) {
             return res.status(400).json({ message: "Fingerprint not registered!" });
@@ -81,11 +83,13 @@ app.post("/voteWithFingerprint", async (req, res) => {
             return res.status(400).json({ message: "You have already voted!" });
         }
 
+        // Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
         if (!candidate) {
             return res.status(400).json({ message: "Candidate not found!" });
         }
 
+        // Update vote count
         candidate.voteCount += 1;
         voter.hasVoted = true;
         await candidate.save();
@@ -93,11 +97,10 @@ app.post("/voteWithFingerprint", async (req, res) => {
 
         res.json({ message: "Vote cast successfully!" });
     } catch (error) {
-        res.status(500).json({ message: "Error casting vote", error });
+        console.error("Error casting vote:", error);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 });
-
-
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 

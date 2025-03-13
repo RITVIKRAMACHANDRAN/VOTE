@@ -85,40 +85,30 @@ function App() {
             alert("Error adding candidate.");
         }
     };
- // ✅ Vote with Fingerprint (Now Works Like Registration)
- const voteWithFingerprint = async () => {
-    try {
-        if (!fingerprintID) {
-            setMessage("❌ No registered fingerprint found. Please register first!");
-            return;
+ 
+    // ✅ WebAuthn: Vote with Fingerprint
+    const voteWithFingerprint = async () => {
+        try {
+            const publicKey = {
+                challenge: new Uint8Array(32),
+                allowCredentials: [{ id: new Uint8Array(atob(fingerprintID)), type: "public-key" }],
+                timeout: 60000,
+            };
+
+            const assertion = await navigator.credentials.get({ publicKey });
+
+            if (assertion) {
+                const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
+                setMessage(response.data.message);
+            } else {
+                setMessage("❌ Fingerprint verification failed!");
+            }
+        } catch (error) {
+            console.error("Error voting with fingerprint:", error);
+            setMessage("❌ Error voting!");
         }
+    };
 
-        const publicKeyCredentialRequestOptions = {
-            challenge: new Uint8Array(32),  // Random challenge
-            allowCredentials: [{
-                id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), 
-                type: "public-key",
-                transports: ["internal"]  // For mobile authentication
-            }],
-            userVerification: "preferred"
-        };
-
-        const fingerprintAuth = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
-
-        if (!fingerprintAuth) {
-            setMessage("❌ Fingerprint authentication failed!");
-            return;
-        }
-
-        const verifiedFingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
-
-        const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: verifiedFingerprintID, candidateName });
-        setMessage(response.data.message);
-    } catch (error) {
-        console.error("Error:", error);
-        setMessage("❌ Error voting. Make sure fingerprint is registered and candidate exists.");
-    }
-};
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
