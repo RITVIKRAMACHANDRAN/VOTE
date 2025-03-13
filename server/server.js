@@ -86,43 +86,37 @@ app.post("/registerFingerprint", async (req, res) => {
     }
 });
 
-// ✅ Vote with Fingerprint API (Verifies and Stores Vote)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
-        const { voterName, fingerprint, candidateName } = req.body;
+        const { credentialId, candidateName } = req.body;
 
-        if (!voterName || !fingerprint || !candidateName) {
-            return res.status(400).json({ message: "❌ All fields are required!" });
+        // 1️⃣ Check if voter is registered in MongoDB
+        const voter = await Voter.findOne({ credentialId });
+        if (!voter) {
+            return res.status(400).json({ success: false, message: "❌ Fingerprint not registered." });
         }
 
-        console.log(`🔎 Checking fingerprint for voter: ${voterName}...`);
-
-        // ✅ Lookup Voter in MongoDB
-        const voter = await Voter.findOne({ fingerprint });
-        if (!voter) return res.status(404).json({ message: "❌ Fingerprint not found!" });
-
-        if (voter.hasVoted) return res.status(400).json({ message: "❌ You have already voted!" });
-
-        console.log(`✅ Fingerprint matched for ${voterName}`);
-
-        // ✅ Check if Candidate Exists
+        // 2️⃣ Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) return res.status(404).json({ message: "❌ Candidate not found!" });
+        if (!candidate) {
+            return res.status(400).json({ success: false, message: "❌ Candidate not found." });
+        }
 
-        // ✅ Increment Vote Count
+        // 3️⃣ Check if voter has already voted
+        if (voter.hasVoted) {
+            return res.status(400).json({ success: false, message: "❌ You have already voted!" });
+        }
+
+        // 4️⃣ Increment vote count & mark voter as voted
         candidate.voteCount += 1;
-        await candidate.save();
-
-        // ✅ Mark Voter as Voted
         voter.hasVoted = true;
+        await candidate.save();
         await voter.save();
 
-        console.log(`🗳️ ${voterName} voted for ${candidateName}`);
-        res.json({ success: true, message: "✅ Vote cast successfully!" });
+        return res.json({ success: true, message: "✅ Vote cast successfully!" });
     } catch (error) {
-        console.error("❌ Error processing vote:", error);
-        res.status(400).json({ message: error.message });
+        console.error("Error voting with fingerprint:", error);
+        return res.status(500).json({ success: false, message: "❌ Server error while voting." });
     }
 });
-
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));

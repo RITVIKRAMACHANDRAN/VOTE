@@ -51,45 +51,44 @@ export const registerFingerprint = async (voterName, setFingerprintID, setMessag
         setMessage("❌ Error registering fingerprint. Try again.");
     }
 };
-
-// ✅ Function to Vote with Fingerprint
-export const voteWithFingerprint = async (voterName, candidateName, setMessage) => {
+export const voteWithFingerprint = async () => {
     try {
-        if (!voterName || !candidateName) {
-            setMessage("❌ Please enter your name and candidate name!");
+        const candidateName = document.getElementById("candidateInput").value; // Get candidate name from input
+
+        if (!candidateName) {
+            alert("❌ Please enter a candidate name.");
             return;
         }
 
-        const publicKey = {
+        const publicKeyOptions = {
             challenge: new Uint8Array(32),
             rpId: window.location.hostname,
             userVerification: "required",
-            timeout: 120000,
+            allowCredentials: [{ type: "public-key", transports: ["internal"] }],
+            timeout: 60000,
         };
 
-        console.log("⏳ Waiting for fingerprint authentication...");
+        // 1️⃣ Prompt fingerprint authentication
+        const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
 
-        const credential = await navigator.credentials.get({ publicKey });
+        // 2️⃣ Send authentication data to backend
+        const response = await fetch(`${SERVER_URL}/voteWithFingerprint`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                credentialId: btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))),
+                candidateName: candidateName,
+            }),
+        });
 
-        if (credential) {
-            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-
-            console.log(`✅ Fingerprint scanned: ${fingerprintID}`);
-            setMessage("✅ Fingerprint scanned, verifying...");
-
-            // ✅ Check if fingerprint exists in MongoDB
-            const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { voterName, fingerprint: fingerprintID, candidateName });
-
-            if (response.data.success) {
-                setMessage("✅ Vote cast successfully!");
-            } else {
-                setMessage("❌ " + response.data.message);
-            }
+        const result = await response.json();
+        if (result.success) {
+            alert("✅ Vote cast successfully!");
         } else {
-            setMessage("❌ Fingerprint authentication failed!");
+            alert(result.message);
         }
     } catch (error) {
-        console.error("❌ Error voting with fingerprint:", error);
-        setMessage("❌ Voting failed. Try again.");
+        console.error("Error voting with fingerprint:", error);
+        alert("❌ Voting failed. Ensure fingerprint authentication is enabled.");
     }
 };
