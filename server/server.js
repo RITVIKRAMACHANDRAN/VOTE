@@ -66,52 +66,46 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 });
 app.post("/registerFingerprint", async (req, res) => {
     try {
-      const { voterName, fingerprintId, candidateName } = req.body;
+      const { voterName, fingerprint, candidateName } = req.body;
   
-      if (!voterName || !fingerprintId || !candidateName) {
-        return res.status(400).json({ message: "Voter name, fingerprint, and candidate name are required." });
+      if (!voterName || !fingerprint || !candidateName) {
+        return res.status(400).json({ message: "All fields are required." });
       }
   
-      let voter = await Voter.findOne({ fingerprintId });
+      // Check if voter is already registered
+      let voter = await Voter.findOne({ fingerprint });
   
       if (voter) {
         if (voter.hasVoted) {
           return res.status(400).json({ message: "Voter has already voted!" });
         }
-  
-        voter.hasVoted = true;
-        voter.candidateName = candidateName;
-        await voter.save();
-  
-        // ✅ Increase candidate's vote count
-        let candidate = await Candidate.findOne({ name: candidateName });
-        if (candidate) {
-          candidate.voteCount += 1;
-          await candidate.save();
-        }
-  
-        return res.json({ message: "Vote successfully cast and vote count updated!" });
-      }
-  
-      // New voter registration & vote
-      const newVoter = new Voter({ voterName, fingerprintId, hasVoted: true, candidateName });
-      await newVoter.save();
-  
-      // ✅ Increase candidate's vote count
-      let candidate = await Candidate.findOne({ name: candidateName });
-      if (candidate) {
-        candidate.voteCount += 1;
-        await candidate.save();
       } else {
-        return res.status(400).json({ message: "Candidate does not exist!" });
+        // Register new voter
+        voter = new Voter({ voterName, fingerprint, hasVoted: false });
+        await voter.save();
       }
   
-      res.json({ message: "Fingerprint registered & vote successfully cast!" });
+      // Check if candidate exists
+      const candidate = await Candidate.findOne({ name: candidateName });
+  
+      if (!candidate) {
+        return res.status(400).json({ message: "Candidate does not exist." });
+      }
+  
+      // Update vote count
+      candidate.voteCount += 1;
+      await candidate.save();
+  
+      // Mark voter as voted
+      voter.hasVoted = true;
+      await voter.save();
+  
+      res.json({ message: "✅ Vote cast successfully!" });
     } catch (error) {
       console.error("❌ Server error while registering fingerprint & updating vote count:", error);
-      res.status(500).json({ message: "Server error while registering fingerprint & updating vote count" });
+      res.status(500).json({ message: "Server error during voting process." });
     }
   });
-  
+   
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
