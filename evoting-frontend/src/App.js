@@ -85,8 +85,7 @@ function App() {
             alert("Error adding candidate.");
         }
     };
-
- // ✅ Vote with Fingerprint (WebAuthn)
+ // ✅ Vote with Fingerprint (Now Works Like Registration)
  const voteWithFingerprint = async () => {
     try {
         if (!fingerprintID) {
@@ -95,18 +94,28 @@ function App() {
         }
 
         const publicKeyCredentialRequestOptions = {
-            challenge: new Uint8Array(32),
-            allowCredentials: [{ id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), type: "public-key" }],
+            challenge: new Uint8Array(32),  // Random challenge
+            allowCredentials: [{
+                id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), 
+                type: "public-key",
+                transports: ["internal"]  // For mobile authentication
+            }],
             userVerification: "preferred"
         };
 
         const fingerprintAuth = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+
+        if (!fingerprintAuth) {
+            setMessage("❌ Fingerprint authentication failed!");
+            return;
+        }
 
         const verifiedFingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
 
         const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: verifiedFingerprintID, candidateName });
         setMessage(response.data.message);
     } catch (error) {
+        console.error("Error:", error);
         setMessage("❌ Error voting. Make sure fingerprint is registered and candidate exists.");
     }
 };

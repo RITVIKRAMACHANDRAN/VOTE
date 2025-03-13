@@ -63,7 +63,7 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
- 
+
 // ✅ Vote with Fingerprint (Now Works Like Registration)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
@@ -72,7 +72,6 @@ app.post("/voteWithFingerprint", async (req, res) => {
             return res.status(400).json({ message: "Fingerprint and candidate name required" });
         }
 
-        // Check if fingerprint exists in MongoDB
         const voter = await Voter.findOne({ fingerprint });
         if (!voter) {
             return res.status(400).json({ message: "Fingerprint not registered!" });
@@ -97,6 +96,8 @@ app.post("/voteWithFingerprint", async (req, res) => {
         res.status(500).json({ message: "Error casting vote", error });
     }
 });
+
+
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 
