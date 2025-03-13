@@ -92,10 +92,10 @@ return (
 
 
              {/* ✅ Vote with Fingerprint */}
-             <h2>Vote</h2>
+             <h2>Vote with Fingerprint</h2>
             <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
             <input type="text" placeholder="Candidate Name" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
-            <button onClick={() => voteWithFingerprint(voterName, candidateName, setMessage)}>Vote with Fingerprint</button>
+            <button onClick={() => voteWithFingerprint(voterName, candidateName, setMessage)}>Vote</button>
 
             <p>{message}</p>
         </div>

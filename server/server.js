@@ -86,45 +86,41 @@ app.post("/registerFingerprint", async (req, res) => {
     }
 });
 
-// ✅ Fetch Voter Fingerprint API (For Verification)
-app.get("/getVoterFingerprint/:voterName", async (req, res) => {
-    try {
-        const voter = await Voter.findOne({ voterName });
-        if (!voter) return res.status(404).json({ message: "❌ Voter not found!" });
-
-        res.json({ fingerprint: voter.fingerprint });
-    } catch (error) {
-        console.error("❌ Error fetching fingerprint:", error);
-        res.status(400).json({ message: error.message });
-    }
-});
-
-// ✅ Vote with Fingerprint API
+// ✅ Vote with Fingerprint API (Verifies and Stores Vote)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { voterName, fingerprint, candidateName } = req.body;
 
-        // ✅ Verify if fingerprint is registered in MongoDB
-        const voter = await Voter.findOne({ voterName, fingerprint });
-        if (!voter) return res.status(400).json({ message: "❌ Fingerprint not registered!" });
+        if (!voterName || !fingerprint || !candidateName) {
+            return res.status(400).json({ message: "❌ All fields are required!" });
+        }
+
+        console.log(`🔎 Checking fingerprint for voter: ${voterName}...`);
+
+        // ✅ Lookup Voter in MongoDB
+        const voter = await Voter.findOne({ fingerprint });
+        if (!voter) return res.status(404).json({ message: "❌ Fingerprint not found!" });
 
         if (voter.hasVoted) return res.status(400).json({ message: "❌ You have already voted!" });
 
-        // ✅ Check if candidate exists
-        const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) return res.status(400).json({ message: "❌ Candidate not found!" });
+        console.log(`✅ Fingerprint matched for ${voterName}`);
 
-        // ✅ Update vote count & prevent duplicate votes
+        // ✅ Check if Candidate Exists
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) return res.status(404).json({ message: "❌ Candidate not found!" });
+
+        // ✅ Increment Vote Count
         candidate.voteCount += 1;
-        voter.hasVoted = true;
         await candidate.save();
+
+        // ✅ Mark Voter as Voted
+        voter.hasVoted = true;
         await voter.save();
 
-        res.json({ message: "✅ Vote cast successfully!" });
+        console.log(`🗳️ ${voterName} voted for ${candidateName}`);
+        res.json({ success: true, message: "✅ Vote cast successfully!" });
     } catch (error) {
-        console.error("Error casting vote:", error);
+        console.error("❌ Error processing vote:", error);
         res.status(400).json({ message: error.message });
     }
 });
-app.listen(port, () => console.log(`✅ Server running on port ${port}`));
-
