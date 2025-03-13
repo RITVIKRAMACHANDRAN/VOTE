@@ -62,33 +62,41 @@ function App() {
         }
       
         try {
-          const credential = await navigator.credentials.create({
-            publicKey: {
-              challenge: new Uint8Array(32),
-              rp: { name: "E-Voting System" },
-              user: {
-                id: new Uint8Array(16),
-                name: voterName,
-                displayName: voterName,
-              },
-              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-              authenticatorSelection: { authenticatorAttachment: "platform" },
-              timeout: 60000,
-              attestation: "direct",
+          // Check if WebAuthn is supported
+          if (!window.PublicKeyCredential) {
+            alert("WebAuthn not supported on this device. Use a compatible browser.");
+            return;
+          }
+      
+          const publicKeyOptions = {
+            challenge: new Uint8Array(32), // Random challenge for security
+            rp: { name: "E-Voting System" },
+            user: {
+              id: new Uint8Array(16),
+              name: voterName,
+              displayName: voterName,
             },
-          });
+            pubKeyCredParams: [
+              { type: "public-key", alg: -7 },  // ES256 (For most browsers)
+              { type: "public-key", alg: -257 } // RS256 (For wider support)
+            ],
+            authenticatorSelection: {
+              authenticatorAttachment: "platform",
+              requireResidentKey: true,  // Ensures fingerprint is stored properly
+              userVerification: "required", // Forces proper fingerprint authentication
+            },
+            timeout: 60000,
+            attestation: "direct", // "none" can cause issues in some browsers
+          };
+      
+          const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
       
           if (!credential || !credential.rawId) {
-            alert("Fingerprint authentication failed. Please try again.");
+            alert("Fingerprint registration failed. Try again.");
             return;
           }
       
           const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      
-          if (!fingerprintId) {
-            alert("Fingerprint ID is missing. Registration failed.");
-            return;
-          }
       
           const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
             voterName,
@@ -99,7 +107,7 @@ function App() {
           alert(response.data.message);
         } catch (error) {
           console.error("❌ Error registering fingerprint & voting:", error);
-          alert("Error registering fingerprint or casting vote");
+          alert("Error registering fingerprint or casting vote.");
         }
       };
       
