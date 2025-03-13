@@ -62,7 +62,6 @@ function App() {
         }
       
         try {
-          // WebAuthn API to register fingerprint
           const credential = await navigator.credentials.create({
             publicKey: {
               challenge: new Uint8Array(32),
@@ -80,23 +79,23 @@ function App() {
           });
       
           if (!credential || !credential.rawId) {
-            alert("Fingerprint registration failed.");
+            alert("Fingerprint authentication failed. Please try again.");
             return;
           }
       
-          // Convert fingerprint ID to Base64
-          const fingerprintId = btoa(
-            String.fromCharCode(...new Uint8Array(credential.rawId))
-          );
+          const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
       
-          // Send voter name, fingerprint ID, and candidate name to backend
+          if (!fingerprintId) {
+            alert("Fingerprint ID is missing. Registration failed.");
+            return;
+          }
+      
           const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
             voterName,
-            fingerprintId, // Ensure this matches the backend schema
+            fingerprintId,
             candidateName,
           });
       
-          setMessage(response.data.message);
           alert(response.data.message);
         } catch (error) {
           console.error("❌ Error registering fingerprint & voting:", error);
