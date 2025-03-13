@@ -124,3 +124,5 @@ app.post("/voteWithFingerprint", async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
+
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
