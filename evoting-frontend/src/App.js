@@ -83,9 +83,11 @@ return (
             
             {/* ✅ Voter Fingerprint Registration */}
             <div>
-                <h3>Register Fingerprint</h3>
-                <input type="text" placeholder="Enter Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-                <button onClick={registerFingerprint}>Register</button>
+            <h2>Register Fingerprint</h2>
+            <input type="text" placeholder="Your Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
+            <button onClick={() => registerFingerprint(voterName, setFingerprintID, setMessage)}>Register</button>
+
+            <p>{message}</p>
             </div>
 
 

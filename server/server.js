@@ -64,30 +64,37 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
 
+// ✅ Register Fingerprint API (Stores in MongoDB)
 app.post("/registerFingerprint", async (req, res) => {
     try {
         const { voterName, fingerprint } = req.body;
-        if (!voterName || !fingerprint) return res.status(400).json({ message: "Voter name and fingerprint required!" });
+        if (!voterName || !fingerprint) return res.status(400).json({ message: "❌ Voter name and fingerprint required!" });
 
+        // ✅ Check if fingerprint is already registered
         const existingVoter = await Voter.findOne({ fingerprint });
-        if (existingVoter) return res.status(400).json({ message: "Fingerprint already registered!" });
+        if (existingVoter) return res.status(400).json({ message: "❌ Fingerprint already registered!" });
 
+        // ✅ Store new voter in MongoDB
         const newVoter = new Voter({ voterName, fingerprint, hasVoted: false });
         await newVoter.save();
+
+        console.log(`✅ Fingerprint registered for ${voterName}`);
         res.json({ message: "✅ Fingerprint registered successfully!" });
     } catch (error) {
-        console.error("Error registering fingerprint:", error);
+        console.error("❌ Error registering fingerprint:", error);
         res.status(400).json({ message: error.message });
     }
-});// ✅ Fetch Voter Fingerprint API
+});
+
+// ✅ Fetch Voter Fingerprint API (For Verification)
 app.get("/getVoterFingerprint/:voterName", async (req, res) => {
     try {
         const voter = await Voter.findOne({ voterName });
-        if (!voter) return res.status(404).json({ message: "Voter not found!" });
+        if (!voter) return res.status(404).json({ message: "❌ Voter not found!" });
 
         res.json({ fingerprint: voter.fingerprint });
     } catch (error) {
-        console.error("Error fetching fingerprint:", error);
+        console.error("❌ Error fetching fingerprint:", error);
         res.status(400).json({ message: error.message });
     }
 });

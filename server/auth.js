@@ -1,9 +1,8 @@
-// auth.js - WebAuthn + MongoDB Authentication
 import axios from "axios";
 
-const SERVER_URL = ""; // ✅ Update with your Railway backend URL
+const SERVER_URL = ""; // ✅ Replace with your Railway backend URL
 
-// ✅ Function to Register Fingerprint
+// ✅ Function to Register Fingerprint (Stores in MongoDB)
 export const registerFingerprint = async (voterName, setFingerprintID, setMessage) => {
     try {
         if (!voterName) {
@@ -19,27 +18,39 @@ export const registerFingerprint = async (voterName, setFingerprintID, setMessag
                 name: voterName,
                 displayName: voterName,
             },
-            pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ✅ Supports ES256
-            authenticatorSelection: { userVerification: "required" },
-            timeout: 60000,
+            pubKeyCredParams: [
+                { type: "public-key", alg: -7 },   // ✅ ES256 (Fixes error)
+                { type: "public-key", alg: -257 }  // ✅ RS256 (Ensures broad compatibility)
+            ],
+            authenticatorSelection: {
+                userVerification: "required",
+                authenticatorAttachment: "platform",  // ✅ Ensures Mobile Fingerprint
+            },
+            timeout: 120000, // ✅ Extended timeout to avoid `NotAllowedError`
         };
+
+        console.log("⏳ Starting fingerprint registration...");
 
         const credential = await navigator.credentials.create({ publicKey });
 
         if (credential) {
-            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId))); 
+            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
             setFingerprintID(fingerprintID);
 
+            console.log("✅ Fingerprint registered");
+
+            // ✅ Store fingerprint in MongoDB
             await axios.post(`${SERVER_URL}/registerFingerprint`, { voterName, fingerprint: fingerprintID });
             setMessage("✅ Fingerprint registered successfully!");
         } else {
             setMessage("❌ Fingerprint registration failed!");
         }
     } catch (error) {
-        console.error("Error registering fingerprint:", error);
-        setMessage("❌ Error registering fingerprint!");
+        console.error("❌ Error registering fingerprint:", error);
+        setMessage("❌ Error registering fingerprint. Try again.");
     }
 };
+
 
 // ✅ Function to Vote with Fingerprint (Uses MongoDB for Verification)
 export const voteWithFingerprint = async (voterName, candidateName, setMessage) => {
