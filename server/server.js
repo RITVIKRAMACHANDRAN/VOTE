@@ -64,25 +64,6 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
  
-app.post("/registerFingerprint", async (req, res) => {
-    try {
-        const { voterName, fingerprint } = req.body;
-        if (!voterName || !fingerprint) {
-            return res.status(400).json({ message: "Voter name and fingerprint required" });
-        }
-
-        const existingVoter = await Voter.findOne({ fingerprint });
-        if (existingVoter) {
-            return res.status(400).json({ message: "Fingerprint already registered!" });
-        }
-
-        const newVoter = new Voter({ voterName, fingerprint, hasVoted: false });
-        await newVoter.save();
-        res.json({ message: "Voter registered successfully!" });
-    } catch (error) {
-        res.status(500).json({ message: "Error registering voter", error });
-    }
-});
 // ✅ Vote with Fingerprint (Now Works Like Registration)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {

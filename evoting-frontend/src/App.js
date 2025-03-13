@@ -16,6 +16,7 @@ function App() {
     const [message, setMessage] = useState("");
     const [voterName, setVoterName] = useState("");
     const [fingerprint, setFingerprint] = useState("");
+    const [fingerprintID, setFingerprintID] = useState("");
 
     useEffect(() => {
         if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
@@ -42,26 +43,33 @@ function App() {
         }
     };
 
-    // ✅ Register Fingerprint
+  
+    // ✅ Register Fingerprint (WebAuthn)
     const registerFingerprint = async () => {
         try {
-            const fingerprintData = await navigator.credentials.create({
-                publicKey: {
-                    challenge: new Uint8Array(32),
-                    rp: { name: "E-Voting System" },
-                    user: { id: new Uint8Array(16), name: voterName, displayName: voterName },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }]
-                }
-            });
+            const publicKey = {
+                challenge: new Uint8Array(32),
+                rp: { name: "E-Voting System" },
+                user: { id: new Uint8Array(16), name: voterName, displayName: voterName },
+                pubKeyCredParams: [
+                    { type: "public-key", alg: -7 },  // ES256 ✅
+                    { type: "public-key", alg: -257 } // RS256 ✅
+                ],
+                authenticatorSelection: { userVerification: "preferred" }
+            };
+
+            const fingerprintData = await navigator.credentials.create({ publicKey });
 
             const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintData.rawId)));
+            setFingerprintID(fingerprintID);
 
             await axios.post(`${SERVER_URL}/registerFingerprint`, { voterName, fingerprint: fingerprintID });
-            setMessage("Fingerprint registered successfully!");
+            setMessage("✅ Fingerprint registered successfully!");
         } catch (error) {
-            setMessage("Error registering fingerprint");
+            setMessage("❌ Error registering fingerprint");
         }
     };
+
     // ✅ Add Candidate (Admin Only)
     const addCandidate = async () => {
         try {
@@ -78,23 +86,30 @@ function App() {
         }
     };
 
-    const voteWithFingerprint = async () => {
-        try {
-            const fingerprintAuth = await navigator.credentials.get({
-                publicKey: {
-                    challenge: new Uint8Array(32),
-                    allowCredentials: [{ id: Uint8Array.from(fingerprint, c => c.charCodeAt(0)), type: "public-key" }],
-                }
-            });
-
-            const fingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
-
-            const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
-            setMessage(response.data.message);
-        } catch (error) {
-            setMessage("❌ Error voting. Make sure fingerprint is registered and candidate exists.");
+ // ✅ Vote with Fingerprint (WebAuthn)
+ const voteWithFingerprint = async () => {
+    try {
+        if (!fingerprintID) {
+            setMessage("❌ No registered fingerprint found. Please register first!");
+            return;
         }
-    };
+
+        const publicKeyCredentialRequestOptions = {
+            challenge: new Uint8Array(32),
+            allowCredentials: [{ id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), type: "public-key" }],
+            userVerification: "preferred"
+        };
+
+        const fingerprintAuth = await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+
+        const verifiedFingerprintID = btoa(String.fromCharCode(...new Uint8Array(fingerprintAuth.rawId)));
+
+        const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: verifiedFingerprintID, candidateName });
+        setMessage(response.data.message);
+    } catch (error) {
+        setMessage("❌ Error voting. Make sure fingerprint is registered and candidate exists.");
+    }
+};
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
