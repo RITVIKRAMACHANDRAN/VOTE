@@ -60,25 +60,25 @@ export const voteWithFingerprint = async () => {
             return;
         }
 
+        // 1️⃣ Use WebAuthn to Authenticate with the Same Fingerprint
         const publicKeyOptions = {
             challenge: new Uint8Array(32),
             rpId: window.location.hostname,
             userVerification: "required",
-            allowCredentials: [{ type: "public-key", transports: ["internal"] }],
+            allowCredentials: [{ type: "public-key", transports: ["internal"] }], // Ensures mobile fingerprint is used
             timeout: 60000,
         };
 
-        // 1️⃣ Prompt fingerprint authentication
         const assertion = await navigator.credentials.get({ publicKey: publicKeyOptions });
 
-        // 2️⃣ Send authentication data to backend
+        // 2️⃣ Extract credential ID
+        const credentialId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
+
+        // 3️⃣ Send to backend for verification
         const response = await fetch(`${SERVER_URL}/voteWithFingerprint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                credentialId: btoa(String.fromCharCode(...new Uint8Array(assertion.rawId))),
-                candidateName: candidateName,
-            }),
+            body: JSON.stringify({ credentialId, candidateName }),
         });
 
         const result = await response.json();

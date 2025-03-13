@@ -67,15 +67,15 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 // ✅ Register Fingerprint API (Stores in MongoDB)
 app.post("/registerFingerprint", async (req, res) => {
     try {
-        const { voterName, fingerprint } = req.body;
+        const { voterName, credentialId} = req.body;
         if (!voterName || !fingerprint) return res.status(400).json({ message: "❌ Voter name and fingerprint required!" });
 
         // ✅ Check if fingerprint is already registered
-        const existingVoter = await Voter.findOne({ fingerprint });
+        const existingVoter = await Voter.findOne({ credentialId});
         if (existingVoter) return res.status(400).json({ message: "❌ Fingerprint already registered!" });
 
         // ✅ Store new voter in MongoDB
-        const newVoter = new Voter({ voterName, fingerprint, hasVoted: false });
+        const newVoter = new Voter({ voterName, credentialId, hasVoted: false });
         await newVoter.save();
 
         console.log(`✅ Fingerprint registered for ${voterName}`);
@@ -85,21 +85,20 @@ app.post("/registerFingerprint", async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 });
-
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { credentialId, candidateName } = req.body;
 
-        // 1️⃣ Check if voter is registered in MongoDB
+        // 1️⃣ Check if voter exists in MongoDB
         const voter = await Voter.findOne({ credentialId });
         if (!voter) {
-            return res.status(400).json({ success: false, message: "❌ Fingerprint not registered." });
+            return res.status(400).json({ success: false, message: "❌ Fingerprint not found!" });
         }
 
         // 2️⃣ Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
         if (!candidate) {
-            return res.status(400).json({ success: false, message: "❌ Candidate not found." });
+            return res.status(400).json({ success: false, message: "❌ Candidate not found!" });
         }
 
         // 3️⃣ Check if voter has already voted
@@ -107,7 +106,7 @@ app.post("/voteWithFingerprint", async (req, res) => {
             return res.status(400).json({ success: false, message: "❌ You have already voted!" });
         }
 
-        // 4️⃣ Increment vote count & mark voter as voted
+        // 4️⃣ Increment vote count and update voter status
         candidate.voteCount += 1;
         voter.hasVoted = true;
         await candidate.save();
@@ -119,4 +118,6 @@ app.post("/voteWithFingerprint", async (req, res) => {
         return res.status(500).json({ success: false, message: "❌ Server error while voting." });
     }
 });
+
+
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
