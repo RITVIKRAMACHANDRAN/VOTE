@@ -8,6 +8,8 @@ const fs = require("fs");
 const path = require("path");
 const Candidate = require("./model/Candidate");
 const Voter = require("./model/Voter");
+const { registerFingerprint, authenticateFingerprint } = require("./auth"); // ✅ Import Auth Module
+
 
 dotenv.config();
 const app = express();
@@ -86,23 +88,13 @@ app.post("/registerFingerprint", async (req, res) => {
     }
 });
 
-// ✅ Vote with Fingerprint API (Now Fixed)
+// ✅ Vote with Fingerprint API (Using `auth.js`)
 app.post("/voteWithFingerprint", async (req, res) => {
     try {
         const { fingerprint, candidateName } = req.body;
-        if (!fingerprint || !candidateName) {
-            return res.status(400).json({ message: "Fingerprint and candidate name required" });
-        }
 
-        // ✅ Check if fingerprint exists in DB
-        const voter = await Voter.findOne({ fingerprint });
-        if (!voter) {
-            return res.status(400).json({ message: "Fingerprint not registered!" });
-        }
-
-        if (voter.hasVoted) {
-            return res.status(400).json({ message: "You have already voted!" });
-        }
+        // ✅ Authenticate Fingerprint
+        const voter = await authenticateFingerprint(fingerprint);
 
         // ✅ Check if candidate exists
         const candidate = await Candidate.findOne({ name: candidateName });
@@ -119,10 +111,8 @@ app.post("/voteWithFingerprint", async (req, res) => {
         res.json({ message: "Vote cast successfully!" });
     } catch (error) {
         console.error("Error casting vote:", error);
-        res.status(500).json({ message: "Internal Server Error" });
+        res.status(400).json({ message: error.message });
     }
 });
-
-
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
 

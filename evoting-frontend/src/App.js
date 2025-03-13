@@ -87,7 +87,8 @@ function App() {
     };
  
 
-    // ✅ WebAuthn: Vote with Fingerprint (Now Fixed)
+
+    // ✅ WebAuthn: Vote with Fingerprint (Using New Auth)
     const voteWithFingerprint = async () => {
         try {
             if (!candidateName) {
@@ -95,11 +96,10 @@ function App() {
                 return;
             }
 
-            // ✅ Trigger WebAuthn for fingerprint authentication
             const publicKey = {
                 challenge: new Uint8Array(32),
                 allowCredentials: [{
-                    id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), // ✅ Convert base64 back to Uint8Array
+                    id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), 
                     type: "public-key",
                 }],
                 timeout: 60000,
@@ -108,7 +108,6 @@ function App() {
             const assertion = await navigator.credentials.get({ publicKey });
 
             if (assertion) {
-                // ✅ Send the fingerprint ID and candidate name to backend
                 const response = await axios.post(`${SERVER_URL}/voteWithFingerprint`, { fingerprint: fingerprintID, candidateName });
                 setMessage(response.data.message);
             } else {
@@ -119,6 +118,7 @@ function App() {
             setMessage("❌ Error voting!");
         }
     };
+
 return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
