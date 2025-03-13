@@ -44,20 +44,7 @@ const isAdmin = (req, res, next) => {
     }
     next();
 };
-const connectMetaMask = async () => {
-    if (window.ethereum) {
-        try {
-            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-            setWalletAddress(accounts[0]); // ✅ Set MetaMask Account
-            alert(`Connected: ${accounts[0]}`);
-        } catch (error) {
-            console.error("MetaMask connection error:", error);
-            alert("Failed to connect MetaMask.");
-        }
-    } else {
-        alert("Please install MetaMask!");
-    }
-};
+
 
 // ✅ Add Candidate (Only Admin)
 app.post("/addCandidate", isAdmin, async (req, res) => {
@@ -107,7 +94,7 @@ app.post("/registerFingerprint", async (req, res) => {
       }
   
       // New voter registration & vote
-      const newVoter = new Voter({ fingerprintId, hasVoted: true, candidateName });
+      const newVoter = new Voter({ voterName, fingerprintId, hasVoted: true, candidateName });
       await newVoter.save();
   
       // ✅ Increase candidate's vote count
