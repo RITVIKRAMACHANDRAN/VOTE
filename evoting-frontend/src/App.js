@@ -86,12 +86,20 @@ function App() {
         }
     };
  
-    // ✅ WebAuthn: Vote with Fingerprint
-    const voteWithFingerprint = async () => {
+       // ✅ WebAuthn: Vote with Fingerprint
+       const voteWithFingerprint = async () => {
         try {
+            if (!candidateName) {
+                setMessage("❌ Please enter a candidate name.");
+                return;
+            }
+
             const publicKey = {
                 challenge: new Uint8Array(32),
-                allowCredentials: [{ id: new Uint8Array(atob(fingerprintID)), type: "public-key" }],
+                allowCredentials: [{
+                    id: Uint8Array.from(atob(fingerprintID), c => c.charCodeAt(0)), // ✅ Convert base64 back to Uint8Array
+                    type: "public-key",
+                }],
                 timeout: 60000,
             };
 
