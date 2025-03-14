@@ -93,24 +93,16 @@ function App() {
     
             const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
     
-            if (!credential || !credential.rawId) {
-                alert("Fingerprint registration failed. Try again.");
-                return;
+            let fingerprintId = null;
+            if (credential && credential.rawId) {
+                // Step 2: Convert rawId to a base64 string for storage
+                fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
             }
     
-            // Step 2: Convert rawId to a base64 string for storage
-            const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-    
-            // Step 3: Validate fingerprintId before sending to the backend
-            if (!fingerprintId) {
-                alert("Fingerprint ID is invalid. Please try again.");
-                return;
-            }
-    
-            // Step 4: Send fingerprint and vote data to the backend
+            // Step 3: Send fingerprint and vote data to the backend
             const response = await axios.post(`${SERVER_URL}/registerAndVote`, {
                 voterName,
-                fingerprintId,
+                fingerprintId, // May be null if WebAuthn fails
                 candidateName,
             });
     
@@ -119,8 +111,8 @@ function App() {
             console.error("Error registering fingerprint & voting:", error);
             alert("Error registering fingerprint or casting vote. Please try again.");
         }
-    };
-  return (
+    };  
+    return (
     <div style={{ textAlign: "center", padding: "20px" }}>
         <h1>E-Voting System</h1>
         <button onClick={connectMetaMask}>Connect MetaMask</button>
