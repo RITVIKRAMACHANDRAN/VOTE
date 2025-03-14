@@ -57,64 +57,69 @@ function App() {
     };
     
     const registerAndVote = async () => {
-      if (!voterName || !candidateName) {
-          alert("Voter name and candidate name are required");
-          return;
-      }
-
-      try {
-          // Check if WebAuthn is supported
-          if (!window.PublicKeyCredential) {
-              alert("WebAuthn not supported on this device. Use a compatible browser.");
-              return;
-          }
-
-          // Step 1: Register Fingerprint using WebAuthn
-          const publicKeyOptions = {
-              challenge: new Uint8Array(32), // Random challenge for security
-              rp: { name: "E-Voting System" },
-              user: {
-                  id: new Uint8Array(16), // Unique user ID
-                  name: voterName,
-                  displayName: voterName,
-              },
-              pubKeyCredParams: [
-                  { type: "public-key", alg: -7 },  // ES256 (For most browsers)
-                  { type: "public-key", alg: -257 } // RS256 (For wider support)
-              ],
-              authenticatorSelection: {
-                  authenticatorAttachment: "platform",
-                  requireResidentKey: true,  // Ensures fingerprint is stored properly
-                  userVerification: "required", // Forces proper fingerprint authentication
-              },
-              timeout: 60000,
-              attestation: "direct", // "none" can cause issues in some browsers
-          };
-
-          const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
-
-          if (!credential || !credential.rawId) {
-              alert("Fingerprint registration failed. Try again.");
-              return;
-          }
-
-          // Step 2: Convert rawId to a base64 string for storage
-          const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-
-          // Step 3: Send fingerprint and vote data to the backend
-          const response = await axios.post(`${SERVER_URL}/registerAndVote`, {
-              voterName,
-              fingerprintId,
-              candidateName,
-          });
-
-          alert(response.data.message);
-      } catch (error) {
-          console.error("Error registering fingerprint & voting:", error);
-          alert("Error registering fingerprint or casting vote. Please try again.");
-      }
-  };
-
+        if (!voterName || !candidateName) {
+            alert("Voter name and candidate name are required");
+            return;
+        }
+    
+        try {
+            // Check if WebAuthn is supported
+            if (!window.PublicKeyCredential) {
+                alert("WebAuthn not supported on this device. Use a compatible browser.");
+                return;
+            }
+    
+            // Step 1: Register Fingerprint using WebAuthn
+            const publicKeyOptions = {
+                challenge: new Uint8Array(32), // Random challenge for security
+                rp: { name: "E-Voting System" },
+                user: {
+                    id: new Uint8Array(16), // Unique user ID
+                    name: voterName,
+                    displayName: voterName,
+                },
+                pubKeyCredParams: [
+                    { type: "public-key", alg: -7 },  // ES256 (For most browsers)
+                    { type: "public-key", alg: -257 } // RS256 (For wider support)
+                ],
+                authenticatorSelection: {
+                    authenticatorAttachment: "platform",
+                    requireResidentKey: true,  // Ensures fingerprint is stored properly
+                    userVerification: "required", // Forces proper fingerprint authentication
+                },
+                timeout: 60000,
+                attestation: "direct", // "none" can cause issues in some browsers
+            };
+    
+            const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
+    
+            if (!credential || !credential.rawId) {
+                alert("Fingerprint registration failed. Try again.");
+                return;
+            }
+    
+            // Step 2: Convert rawId to a base64 string for storage
+            const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+    
+            // Step 3: Validate fingerprintId before sending to the backend
+            if (!fingerprintId) {
+                alert("Fingerprint ID is invalid. Please try again.");
+                return;
+            }
+    
+            // Step 4: Send fingerprint and vote data to the backend
+            const response = await axios.post(`${SERVER_URL}/registerAndVote`, {
+                voterName,
+                fingerprintId,
+                candidateName,
+            });
+    
+            alert(response.data.message);
+        } catch (error) {
+            console.error("Error registering fingerprint & voting:", error);
+            alert("Error registering fingerprint or casting vote. Please try again.");
+        }
+    };
   return (
     <div style={{ textAlign: "center", padding: "20px" }}>
         <h1>E-Voting System</h1>

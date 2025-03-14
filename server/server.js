@@ -102,6 +102,12 @@ app.post("/registerAndVote", async (req, res) => {
         res.status(201).json({ message: "Vote cast successfully!" });
     } catch (error) {
         console.error("Error registering fingerprint & voting:", error);
+
+        // Handle null fingerprintId error
+        if (error.message === "Fingerprint ID is required") {
+            return res.status(400).json({ message: "Fingerprint ID is required" });
+        }
+
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
