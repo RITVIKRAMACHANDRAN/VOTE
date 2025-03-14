@@ -74,7 +74,7 @@ function App() {
               challenge: new Uint8Array(32), // Random challenge for security
               rp: { name: "E-Voting System" },
               user: {
-                  id: new Uint8Array(16),
+                  id: new Uint8Array(16), // Unique user ID
                   name: voterName,
                   displayName: voterName,
               },
@@ -111,9 +111,10 @@ function App() {
           alert(response.data.message);
       } catch (error) {
           console.error("Error registering fingerprint & voting:", error);
-          alert("Error registering fingerprint or casting vote.");
+          alert("Error registering fingerprint or casting vote. Please try again.");
       }
   };
+
   return (
     <div style={{ textAlign: "center", padding: "20px" }}>
         <h1>E-Voting System</h1>
