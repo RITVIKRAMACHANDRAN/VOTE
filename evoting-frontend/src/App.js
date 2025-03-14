@@ -114,5 +114,94 @@ function App() {
           alert("Error registering fingerprint or casting vote.");
       }
   };
+  return (
+    <div style={{ textAlign: "center", padding: "20px" }}>
+        <h1>E-Voting System</h1>
+        <button onClick={connectMetaMask}>Connect MetaMask</button>
+        <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
+
+        {/* Admin Panel for Adding Candidates */}
+        {adminMode && (
+            <div>
+                <h2>Admin Panel</h2>
+                <input
+                    type="text"
+                    value={candidateName}
+                    onChange={(e) => setCandidateName(e.target.value)}
+                    placeholder="Enter Candidate Name"
+                />
+                <button onClick={addCandidate}>Add Candidate</button>
+            </div>
+        )}
+
+        {/* Voter Registration and Voting */}
+        <div>
+            <input
+                type="text"
+                placeholder="Enter Voter Name"
+                value={voterName}
+                onChange={(e) => setVoterName(e.target.value)}
+            />
+        </div>
+
+        <div>
+            <input
+                type="text"
+                placeholder="Enter Candidate Name"
+                value={candidateName}
+                onChange={(e) => setCandidateName(e.target.value)}
+            />
+        </div>
+
+        <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
+
+        {message && <p>{message}</p>}
+    </div>
+);
+ return (
+        <div style={{ textAlign: "center", padding: "20px" }}>
+            <h1>E-Voting System</h1>
+            <button onClick={connectMetaMask}>Connect MetaMask</button>
+            <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
+
+            {/* Admin Panel for Adding Candidates */}
+            {adminMode && (
+                <div>
+                    <h2>Admin Panel</h2>
+                    <input
+                        type="text"
+                        value={candidateName}
+                        onChange={(e) => setCandidateName(e.target.value)}
+                        placeholder="Enter Candidate Name"
+                    />
+                    <button onClick={addCandidate}>Add Candidate</button>
+                </div>
+            )}
+
+            {/* Voter Registration and Voting */}
+            <div>
+                <input
+                    type="text"
+                    placeholder="Enter Voter Name"
+                    value={voterName}
+                    onChange={(e) => setVoterName(e.target.value)}
+                />
+            </div>
+
+            <div>
+                <input
+                    type="text"
+                    placeholder="Enter Candidate Name"
+                    value={candidateName}
+                    onChange={(e) => setCandidateName(e.target.value)}
+                />
+            </div>
+
+            <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
+
+            {message && <p>{message}</p>}
+        </div>
+    );
 }
+
 export default App;
