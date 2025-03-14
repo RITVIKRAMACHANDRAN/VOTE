@@ -76,32 +76,32 @@ app.post("/registerAndVote", async (req, res) => {
         return res.status(400).json({ message: "Voter name, fingerprint ID, and candidate name are required." });
       }
   
-      // ✅ Check if the voter exists in the database
       let voter = await Voter.findOne({ fingerprintId });
   
+      // ✅ Prevent duplicate voting
       if (voter) {
         if (voter.hasVoted) {
-          return res.status(400).json({ message: "You have already voted!" });
+          return res.status(400).json({ message: "You have already voted! Multiple votes are not allowed." });
         }
-        // ✅ Allow voting if not voted yet
+  
         const candidate = await Candidate.findOne({ name: candidateName });
         if (!candidate) return res.status(404).json({ message: "Candidate not found." });
   
         candidate.voteCount += 1;
         await candidate.save();
   
-        voter.hasVoted = true;
+        voter.hasVoted = true; // ✅ Mark voter as voted
         voter.candidateName = candidateName;
         await voter.save();
   
         return res.status(200).json({ message: "Vote cast successfully!" });
       }
   
-      // ✅ If voter is new, register and vote
+      // ✅ If voter is new, register and allow them to vote
       voter = new Voter({
         voterName,
         fingerprintId,
-        hasVoted: true, // ✅ Automatically set to true after voting
+        hasVoted: true, // Automatically mark as voted
         candidateName,
       });
   
@@ -119,5 +119,5 @@ app.post("/registerAndVote", async (req, res) => {
       res.status(500).json({ message: "Internal Server Error." });
     }
   });
-    
+      
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
