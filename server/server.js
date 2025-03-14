@@ -76,37 +76,36 @@ app.post("/registerAndVote", async (req, res) => {
         return res.status(400).json({ message: "Voter name, fingerprint ID, and candidate name are required." });
       }
   
-      // ✅ Check if voter has already voted
-      const existingVoter = await Voter.findOne({ fingerprintId });
+      // ✅ Check if the voter exists in the database
+      let voter = await Voter.findOne({ fingerprintId });
   
-      if (existingVoter) {
-        if (existingVoter.hasVoted) {
+      if (voter) {
+        if (voter.hasVoted) {
           return res.status(400).json({ message: "You have already voted!" });
-        } else {
-          // ✅ Allow voting if not voted yet
-          const candidate = await Candidate.findOne({ name: candidateName });
-          if (!candidate) return res.status(404).json({ message: "Candidate not found." });
-  
-          candidate.voteCount += 1;
-          await candidate.save();
-  
-          existingVoter.hasVoted = true;
-          existingVoter.candidateName = candidateName;
-          await existingVoter.save();
-  
-          return res.status(200).json({ message: "Vote cast successfully!" });
         }
+        // ✅ Allow voting if not voted yet
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) return res.status(404).json({ message: "Candidate not found." });
+  
+        candidate.voteCount += 1;
+        await candidate.save();
+  
+        voter.hasVoted = true;
+        voter.candidateName = candidateName;
+        await voter.save();
+  
+        return res.status(200).json({ message: "Vote cast successfully!" });
       }
   
-      // ✅ If voter is new, register and allow voting
-      const newVoter = new Voter({
+      // ✅ If voter is new, register and vote
+      voter = new Voter({
         voterName,
         fingerprintId,
-        hasVoted: true, // ✅ Immediately set to true after voting
+        hasVoted: true, // ✅ Automatically set to true after voting
         candidateName,
       });
   
-      await newVoter.save();
+      await voter.save();
   
       const candidate = await Candidate.findOne({ name: candidateName });
       if (!candidate) return res.status(404).json({ message: "Candidate not found." });
@@ -120,5 +119,5 @@ app.post("/registerAndVote", async (req, res) => {
       res.status(500).json({ message: "Internal Server Error." });
     }
   });
-  
+    
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
