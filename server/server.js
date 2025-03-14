@@ -68,65 +68,57 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
 });
 
 
-// ✅ Register and Vote
 app.post("/registerAndVote", async (req, res) => {
     try {
-        const { voterName, fingerprintId, candidateName, walletAddress } = req.body;
-
-        // Validate input
-        if (!voterName || !candidateName) {
-            return res.status(400).json({ message: "Voter name and candidate name are required" });
-        }
-
-        // Generate a unique voterId
-        let voterId;
-        if (fingerprintId) {
-            // Use the WebAuthn-generated fingerprintId as the voterId
-            voterId = fingerprintId;
+      const { voterName, fingerprintId, candidateName } = req.body;
+  
+      if (!voterName || !fingerprintId || !candidateName) {
+        return res.status(400).json({ message: "Voter name, fingerprint ID, and candidate name are required." });
+      }
+  
+      // ✅ Allow multiple registrations but check if the voter has already voted
+      const existingVoter = await Voter.findOne({ fingerprintId });
+  
+      if (existingVoter) {
+        if (existingVoter.hasVoted) {
+          return res.status(400).json({ message: "You have already voted!" });
         } else {
-            // Generate a fallback voterId (e.g., voter1, voter2, etc.)
-            voterId = `voter${++voterCounter}`;
+          // ✅ Allow voting if not voted yet
+          const candidate = await Candidate.findOne({ name: candidateName });
+          if (!candidate) return res.status(404).json({ message: "Candidate not found." });
+  
+          candidate.voteCount += 1;
+          await candidate.save();
+  
+          existingVoter.hasVoted = true;
+          existingVoter.candidateName = candidateName;
+          await existingVoter.save();
+  
+          return res.status(200).json({ message: "Vote cast successfully!" });
         }
-
-        // Check if the voter has already voted for the same candidate
-        const existingVote = await Voter.findOne({ voterId, candidateName });
-        if (existingVote) {
-            return res.status(400).json({ message: "You have already voted for this candidate!" });
-        }
-
-        // Check if the candidate exists
-        const candidate = await Candidate.findOne({ name: candidateName });
-        if (!candidate) {
-            return res.status(404).json({ message: "Candidate not found." });
-        }
-
-        // Register the voter and mark them as voted
-        const newVoter = new Voter({
-            voterName,
-            fingerprintId, // Store the WebAuthn fingerprintId (may be null)
-            voterId, // Store the unique voterId
-            walletAddress: walletAddress || null, // Store the wallet address (set to null if not provided)
-            candidateName,
-            hasVoted: true,
-        });
-
-        await newVoter.save(); // Save as a new document
-
-        // Increment the candidate's vote count
-        candidate.voteCount += 1;
-        await candidate.save();
-
-        res.status(201).json({ message: "Vote cast successfully!" });
+      }
+  
+      // ✅ If voter is new, register and allow voting
+      const newVoter = new Voter({
+        voterName,
+        fingerprintId,
+        hasVoted: true,
+        candidateName,
+      });
+  
+      await newVoter.save();
+  
+      const candidate = await Candidate.findOne({ name: candidateName });
+      if (!candidate) return res.status(404).json({ message: "Candidate not found." });
+  
+      candidate.voteCount += 1;
+      await candidate.save();
+  
+      res.status(201).json({ message: "Fingerprint registered and vote cast successfully!" });
     } catch (error) {
-        console.error("Error registering voter & voting:", error);
-
-        // Handle duplicate key error
-        if (error.code === 11000) {
-            return res.status(400).json({ message: "You have already voted!" });
-        }
-
-        res.status(500).json({ message: "Internal Server Error." });
+      console.error("❌ Server error while registering fingerprint & voting:", error);
+      res.status(500).json({ message: "Internal Server Error." });
     }
-});
-
+  });
+  
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
