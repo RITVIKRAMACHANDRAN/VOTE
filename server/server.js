@@ -64,35 +64,46 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
-app.post("/registerFingerprint", async (req, res) => {
+
+app.post("/registerAndVote", async (req, res) => {
     try {
-      const { voterName, fingerprintId, candidateName } = req.body;
-  
-      if (!fingerprintId) {
-        return res.status(400).json({ message: "Fingerprint ID is required" });
-      }
-  
-      let existingVoter = await Voter.findOne({ fingerprintId });
-  
-      if (existingVoter) {
-        return res.status(400).json({ message: "Fingerprint already registered!" });
-      }
-  
-      const newVoter = new Voter({
-        voterName,
-        fingerprintId,
-        hasVoted: false,
-      });
-  
-      await newVoter.save();
-  
-      res.status(201).json({ message: "Fingerprint registered successfully!" });
+        const { voterName, fingerprintId, candidateName } = req.body;
+
+        if (!fingerprintId) {
+            return res.status(400).json({ message: "Fingerprint ID is required" });
+        }
+
+        // Check if the fingerprint is already registered
+        const existingVoter = await Voter.findOne({ fingerprintId });
+        if (existingVoter) {
+            return res.status(400).json({ message: "You have already voted!" });
+        }
+
+        // Check if the candidate exists
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) {
+            return res.status(404).json({ message: "Candidate not found." });
+        }
+
+        // Register the voter and mark them as voted
+        const newVoter = new Voter({
+            voterName,
+            fingerprintId,
+            hasVoted: true,
+        });
+
+        await newVoter.save();
+
+        // Increment the candidate's vote count
+        candidate.voteCount += 1;
+        await candidate.save();
+
+        res.status(201).json({ message: "Vote cast successfully!" });
     } catch (error) {
-      console.error("❌ Server error while registering:", error);
-      res.status(500).json({ message: "Error registering fingerprint" });
+        console.error("Error registering fingerprint & voting:", error);
+        res.status(500).json({ message: "Internal Server Error." });
     }
-  });
-  
+});  
   
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));

@@ -55,104 +55,64 @@ function App() {
             alert("Error adding candidate.");
         }
     };
+    
     const registerAndVote = async () => {
-        if (!voterName || !candidateName) {
+      if (!voterName || !candidateName) {
           alert("Voter name and candidate name are required");
           return;
-        }
-      
-        try {
+      }
+
+      try {
           // Check if WebAuthn is supported
           if (!window.PublicKeyCredential) {
-            alert("WebAuthn not supported on this device. Use a compatible browser.");
-            return;
+              alert("WebAuthn not supported on this device. Use a compatible browser.");
+              return;
           }
-      
+
+          // Step 1: Register Fingerprint using WebAuthn
           const publicKeyOptions = {
-            challenge: new Uint8Array(32), // Random challenge for security
-            rp: { name: "E-Voting System" },
-            user: {
-              id: new Uint8Array(16),
-              name: voterName,
-              displayName: voterName,
-            },
-            pubKeyCredParams: [
-              { type: "public-key", alg: -7 },  // ES256 (For most browsers)
-              { type: "public-key", alg: -257 } // RS256 (For wider support)
-            ],
-            authenticatorSelection: {
-              authenticatorAttachment: "platform",
-              requireResidentKey: true,  // Ensures fingerprint is stored properly
-              userVerification: "required", // Forces proper fingerprint authentication
-            },
-            timeout: 60000,
-            attestation: "direct", // "none" can cause issues in some browsers
+              challenge: new Uint8Array(32), // Random challenge for security
+              rp: { name: "E-Voting System" },
+              user: {
+                  id: new Uint8Array(16),
+                  name: voterName,
+                  displayName: voterName,
+              },
+              pubKeyCredParams: [
+                  { type: "public-key", alg: -7 },  // ES256 (For most browsers)
+                  { type: "public-key", alg: -257 } // RS256 (For wider support)
+              ],
+              authenticatorSelection: {
+                  authenticatorAttachment: "platform",
+                  requireResidentKey: true,  // Ensures fingerprint is stored properly
+                  userVerification: "required", // Forces proper fingerprint authentication
+              },
+              timeout: 60000,
+              attestation: "direct", // "none" can cause issues in some browsers
           };
-      
+
           const credential = await navigator.credentials.create({ publicKey: publicKeyOptions });
-      
+
           if (!credential || !credential.rawId) {
-            alert("Fingerprint registration failed. Try again.");
-            return;
+              alert("Fingerprint registration failed. Try again.");
+              return;
           }
-      
+
+          // Step 2: Convert rawId to a base64 string for storage
           const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      
-          const response = await axios.post(`${SERVER_URL}/registerFingerprint`, {
-            voterName,
-            fingerprintId,
-            candidateName,
+
+          // Step 3: Send fingerprint and vote data to the backend
+          const response = await axios.post(`${SERVER_URL}/registerAndVote`, {
+              voterName,
+              fingerprintId,
+              candidateName,
           });
-      
+
           alert(response.data.message);
-        } catch (error) {
-          console.error("❌ Error registering fingerprint & voting:", error);
+      } catch (error) {
+          console.error("Error registering fingerprint & voting:", error);
           alert("Error registering fingerprint or casting vote.");
-        }
-      };
-      
-return (
-        <div style={{ textAlign: "center", padding: "20px" }}>
-            <h1>E-Voting System</h1>
-            <button onClick={connectMetaMask}>Connect MetaMask</button>
-            <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
-
-            {/* ✅ Admin Panel for Adding Candidates */}
-            {adminMode && (
-                <div>
-                    <h2>Admin Panel</h2>
-                    <input
-                        type="text"
-                        value={candidateName}
-                        onChange={(e) => setCandidateName(e.target.value)}
-                        placeholder="Enter Candidate Name"
-                    />
-                    <button onClick={addCandidate}>Add Candidate</button>
-                </div>
-            )}
-           
-      <div>
-        <input
-          type="text"
-          placeholder="Enter Voter Name"
-          value={voterName}
-          onChange={(e) => setVoterName(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <input
-          type="text"
-          placeholder="Enter Candidate Name"
-          value={candidateName}
-          onChange={(e) => setCandidateName(e.target.value)}
-        />
-      </div>
-
-      <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
-
-      {message && <p>{message}</p>}
-    </div>
-  );
+      }
+  };
 }
 export default App;
