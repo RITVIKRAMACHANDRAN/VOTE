@@ -45,6 +45,8 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
+let voterCounter = 0;
+
 
 // ✅ Add Candidate (Only Admin)
 app.post("/addCandidate", isAdmin, async (req, res) => {
