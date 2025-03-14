@@ -67,10 +67,11 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
     }
 });
 
+
 // ✅ Register and Vote
 app.post("/registerAndVote", async (req, res) => {
     try {
-        const { voterName, fingerprintId, candidateName } = req.body;
+        const { voterName, fingerprintId, candidateName, walletAddress } = req.body;
 
         // Validate input
         if (!voterName || !candidateName) {
@@ -104,6 +105,7 @@ app.post("/registerAndVote", async (req, res) => {
             voterName,
             fingerprintId, // Store the WebAuthn fingerprintId (may be null)
             voterId, // Store the unique voterId
+            walletAddress: walletAddress || null, // Store the wallet address (set to null if not provided)
             candidateName,
             hasVoted: true,
         });
@@ -126,4 +128,5 @@ app.post("/registerAndVote", async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
+
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
