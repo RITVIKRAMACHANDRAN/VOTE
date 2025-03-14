@@ -66,8 +66,6 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
-
-
 app.post("/registerAndVote", async (req, res) => {
     try {
       const { voterName, fingerprintId, candidateName } = req.body;
@@ -76,7 +74,7 @@ app.post("/registerAndVote", async (req, res) => {
         return res.status(400).json({ message: "Voter name, fingerprint ID, and candidate name are required." });
       }
   
-      let voter = await Voter.findOne({ fingerprintId });
+      let voter = await Voter.findOne({ voterName });
   
       // ✅ Prevent duplicate voting
       if (voter) {
@@ -119,5 +117,5 @@ app.post("/registerAndVote", async (req, res) => {
       res.status(500).json({ message: "Internal Server Error." });
     }
   });
-      
+  
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));
