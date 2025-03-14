@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const VoterSchema = new mongoose.Schema({
     voterName: { type: String, required: true },
-    fingerprintIds: [{ type: String, unique: true }], // Array of fingerprintIds
+    fingerprintId: { type: String, required: true, unique: true }, // Ensure each fingerprintId is unique
     hasVoted: { type: Boolean, default: false },
 });
 
