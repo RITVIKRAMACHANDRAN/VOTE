@@ -64,46 +64,52 @@ app.post("/addCandidate", isAdmin, async (req, res) => {
         res.status(500).json({ message: "Internal Server Error." });
     }
 });
-
 app.post("/registerAndVote", async (req, res) => {
-  try {
-      const { voterName, fingerprintId, candidateName } = req.body;
+    try {
+        const { voterName, fingerprintId, candidateName } = req.body;
 
-      if (!fingerprintId) {
-          return res.status(400).json({ message: "Fingerprint ID is required" });
-      }
+        // Validate input
+        if (!fingerprintId) {
+            return res.status(400).json({ message: "Fingerprint ID is required" });
+        }
 
-      // Check if the fingerprint is already registered
-      const existingVoter = await Voter.findOne({ fingerprintId });
-      if (existingVoter) {
-          return res.status(400).json({ message: "You have already voted!" });
-      }
+        // Check if the fingerprint is already registered
+        const existingVoter = await Voter.findOne({ fingerprintIds: fingerprintId });
+        if (existingVoter) {
+            return res.status(400).json({ message: "You have already voted!" });
+        }
 
-      // Check if the candidate exists
-      const candidate = await Candidate.findOne({ name: candidateName });
-      if (!candidate) {
-          return res.status(404).json({ message: "Candidate not found." });
-      }
+        // Check if the candidate exists
+        const candidate = await Candidate.findOne({ name: candidateName });
+        if (!candidate) {
+            return res.status(404).json({ message: "Candidate not found." });
+        }
 
-      // Register the voter and mark them as voted
-      const newVoter = new Voter({
-          voterName,
-          fingerprintId,
-          hasVoted: true,
-      });
+        // Register the voter and mark them as voted
+        const newVoter = new Voter({
+            voterName,
+            fingerprintIds: [fingerprintId], // Store the fingerprintId in the array
+            hasVoted: true,
+        });
 
-      await newVoter.save();
+        await newVoter.save();
 
-      // Increment the candidate's vote count
-      candidate.voteCount += 1;
-      await candidate.save();
+        // Increment the candidate's vote count
+        candidate.voteCount += 1;
+        await candidate.save();
 
-      res.status(201).json({ message: "Vote cast successfully!" });
-  } catch (error) {
-      console.error("Error registering fingerprint & voting:", error);
-      res.status(500).json({ message: "Internal Server Error." });
-  }
+        res.status(201).json({ message: "Vote cast successfully!" });
+    } catch (error) {
+        console.error("Error registering fingerprint & voting:", error);
+
+        // Handle duplicate key error
+        if (error.code === 11000) {
+            return res.status(400).json({ message: "You have already voted!" });
+        }
+
+        res.status(500).json({ message: "Internal Server Error." });
+    }
 });  
-  
+
 
 app.listen(port, () => console.log(`✅ Server running on port ${port}`));

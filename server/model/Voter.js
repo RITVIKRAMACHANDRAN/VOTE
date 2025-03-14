@@ -1,17 +1,9 @@
 const mongoose = require("mongoose");
 
 const VoterSchema = new mongoose.Schema({
-  voterName: { type: String, required: true },
-  fingerprintId: { type: String, required: true, unique: true },
-  hasVoted: { type: Boolean, default: false },
-});
-
-// Ensure fingerprintId cannot be null before saving
-VoterSchema.pre("save", function (next) {
-  if (!this.fingerprintId) {
-    return next(new Error("Fingerprint ID is required"));
-  }
-  next();
+    voterName: { type: String, required: true },
+    fingerprintIds: [{ type: String, unique: true }], // Array of fingerprintIds
+    hasVoted: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model("Voter", VoterSchema);
