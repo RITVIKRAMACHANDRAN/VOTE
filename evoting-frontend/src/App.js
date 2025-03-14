@@ -72,13 +72,10 @@ function App() {
                 name: voterName,
                 displayName: voterName,
               },
-              pubKeyCredParams: [
-                { type: "public-key", alg: -7 }, // ES256
-                { type: "public-key", alg: -257 }, // RS256
-              ],
+              pubKeyCredParams: [{ type: "public-key", alg: -7 }], // ✅ Using only one stable algorithm
               authenticatorSelection: { authenticatorAttachment: "platform" },
               timeout: 60000,
-              attestation: "direct",
+              attestation: "none",
             },
           });
       
@@ -96,7 +93,7 @@ function App() {
           alert("Error registering fingerprint or casting vote");
         }
       };
-        
+              
     return (
     <div style={{ textAlign: "center", padding: "20px" }}>
         <h1>E-Voting System</h1>

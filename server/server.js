@@ -76,7 +76,7 @@ app.post("/registerAndVote", async (req, res) => {
         return res.status(400).json({ message: "Voter name, fingerprint ID, and candidate name are required." });
       }
   
-      // ✅ Allow multiple registrations but check if the voter has already voted
+      // ✅ Check if voter has already voted
       const existingVoter = await Voter.findOne({ fingerprintId });
   
       if (existingVoter) {
@@ -102,7 +102,7 @@ app.post("/registerAndVote", async (req, res) => {
       const newVoter = new Voter({
         voterName,
         fingerprintId,
-        hasVoted: true,
+        hasVoted: true, // ✅ Immediately set to true after voting
         candidateName,
       });
   
