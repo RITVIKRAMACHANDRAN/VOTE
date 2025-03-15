@@ -5,10 +5,16 @@ const cors = require("cors");
 const { ethers } = require("ethers");
 const Voter = require("./model/Voter");
 const Candidate = require("./model/Candidate");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+app.use(express.static(path.join(__dirname, "build")));
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
+});
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
