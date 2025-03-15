@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import Web3 from "web3";
-
+import axios from "axios";
+import { startRegistration } from "@simplewebauthn/browser";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
-const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69A76B7D"; // Admin MetaMask Address
+const ADMIN_ADDRESS = "process.env.admin_address"; // Admin MetaMask Address
 
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
@@ -12,8 +12,23 @@ function App() {
     const [adminMode, setAdminMode] = useState(false);
     const [message, setMessage] = useState("");
     const [voterName, setVoterName] = useState("");
+    const [votingStarted, setVotingStarted] = useState(false);
+
     
  
+    useEffect(() => {
+        const checkVotingTime = async () => {
+            try {
+                const response = await axios.get(`${SERVER_URL}/votingTime`);
+                const { startTime, endTime } = response.data;
+                const currentTime = Math.floor(Date.now() / 1000);
+                setVotingStarted(currentTime >= startTime);
+            } catch (error) {
+                console.error("❌ Error fetching voting time:", error);
+            }
+        };
+        checkVotingTime();
+    }, []);
 
     useEffect(() => {
         if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
@@ -55,88 +70,37 @@ function App() {
             alert("Error adding candidate.");
         }
     };
-    const registerAndVote = async () => {
-        if (!voterName || !candidateName) {
-          alert("Voter name and candidate name are required");
-          return;
+ 
+    const registerVoter = async () => {
+        if (votingStarted) {
+            alert("Voter registration is closed!");
+            return;
         }
-      
+
         try {
-          const credential = await navigator.credentials.create({
-            publicKey: {
-              challenge: new Uint8Array(32),
-              rp: { name: "E-Voting System" },
-              user: {
-                id: new Uint8Array(16),
-                name: voterName,
-                displayName: voterName,
-              },
-              pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-              authenticatorSelection: { authenticatorAttachment: "platform" },
-              timeout: 60000,
-              attestation: "none",
-            },
-          });
-      
-          const fingerprintId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-      
-          const response = await axios.post(`${SERVER_URL}/registerAndVote`, {
-            voterName,
-            fingerprintId,
-            candidateName,
-          });
-      
-          alert(response.data.message);
+            const credential = await startRegistration({ publicKey: { challenge: new Uint8Array(32) } });
+            const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+
+            const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, uuid });
+            setMessage(response.data.message);
         } catch (error) {
-          console.error("❌ Error registering fingerprint & voting:", error);
-          alert("Error registering fingerprint or casting vote");
+            setMessage("❌ Error registering voter");
         }
-      };
-            
-    return (
-    <div style={{ textAlign: "center", padding: "20px" }}>
-        <h1>E-Voting System</h1>
-        <button onClick={connectMetaMask}>Connect MetaMask</button>
-        <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
+    };
 
-        {/* Admin Panel for Adding Candidates */}
-        {adminMode && (
-            <div>
-                <h2>Admin Panel</h2>
-                <input
-                    type="text"
-                    value={candidateName}
-                    onChange={(e) => setCandidateName(e.target.value)}
-                    placeholder="Enter Candidate Name"
-                />
-                <button onClick={addCandidate}>Add Candidate</button>
-            </div>
-        )}
+    const vote = async () => {
+        try {
+            const credential = await startRegistration({ publicKey: { challenge: new Uint8Array(32) } });
+            const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
 
-        {/* Voter Registration and Voting */}
-        <div>
-            <input
-                type="text"
-                placeholder="Enter Voter Name"
-                value={voterName}
-                onChange={(e) => setVoterName(e.target.value)}
-            />
-        </div>
+            const response = await axios.post(`${SERVER_URL}/vote`, { uuid, candidateName });
+            setMessage(response.data.message);
+        } catch (error) {
+            setMessage("❌ Error casting vote");
+        }
+    };
 
-        <div>
-            <input
-                type="text"
-                placeholder="Enter Candidate Name"
-                value={candidateName}
-                onChange={(e) => setCandidateName(e.target.value)}
-            />
-        </div>
 
-        <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
-
-        {message && <p>{message}</p>}
-    </div>
-);
  return (
         <div style={{ textAlign: "center", padding: "20px" }}>
             <h1>E-Voting System</h1>
@@ -157,30 +121,21 @@ function App() {
                 </div>
             )}
 
-            {/* Voter Registration and Voting */}
-            <div>
-                <input
-                    type="text"
-                    placeholder="Enter Voter Name"
-                    value={voterName}
-                    onChange={(e) => setVoterName(e.target.value)}
-                />
+            
+<div>
+                <h2>Register as Voter</h2>
+                <input type="text" placeholder="Voter Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
+                <button onClick={registerVoter}>Register with Fingerprint</button>
             </div>
 
             <div>
-                <input
-                    type="text"
-                    placeholder="Enter Candidate Name"
-                    value={candidateName}
-                    onChange={(e) => setCandidateName(e.target.value)}
-                />
+                <h2>Vote</h2>
+                <input type="text" placeholder="Candidate Name" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
+                <button onClick={vote}>Vote</button>
             </div>
 
-            <button onClick={registerAndVote}>Register & Vote with Fingerprint</button>
-
-            {message && <p>{message}</p>}
+            <h3>{message}</h3>
         </div>
     );
-}
-
+};
 export default App;

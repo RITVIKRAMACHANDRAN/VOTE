@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
 
 const CandidateSchema = new mongoose.Schema({
-    name: { type: String, required: true, unique: true },
-    voteCount: { type: Number, default: 0 },
+    candidateName: { type: String, required: true, unique: true },
+    voteCount: { type: Number, default: 0 } // Stores vote count
 });
 
-module.exports = mongoose.model("Candidate", CandidateSchema);
+const Candidate = mongoose.model("Candidate", CandidateSchema);
+module.exports = Candidate;

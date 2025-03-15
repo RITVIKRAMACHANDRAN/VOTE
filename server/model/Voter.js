@@ -1,11 +1,10 @@
 const mongoose = require("mongoose");
 
-const voterSchema = new mongoose.Schema({
-  voterName: { type: String, required: true, unique: true }, // ✅ Ensure only one vote per voterName
-  fingerprintId: { type: String, required: true }, 
-  hasVoted: { type: Boolean, default: false }, // ✅ Prevents multiple votes
-  candidateName: { type: String, default: null },
+const VoterSchema = new mongoose.Schema({
+    voterName: { type: String, required: true },
+    uuid: { type: String, required: true, unique: true }, // Prevents duplicate registration
+    hasVoted: { type: Boolean, default: false } // Tracks if the voter has voted
 });
 
-module.exports = mongoose.model("Voter", voterSchema);
-
+const Voter = mongoose.model("Voter", VoterSchema);
+module.exports = Voter;
