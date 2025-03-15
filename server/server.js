@@ -18,7 +18,14 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 // Ethereum Setup
 const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
 const signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
-const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, require("./artifacts/contracts/EVoting.sol/EVoting.json"), signer);
+const contractJSON = require("./artifacts/contracts/EVoting.sol/EVoting.json"); // ✅ Load JSON
+const contractABI = contractJSON.abi; // ✅ Extract ABI
+
+const contract = new ethers.Contract(
+    process.env.CONTRACT_ADDRESS,
+    contractABI, // ✅ Pass only the ABI
+    signer
+);
 
 app.get("/votingTime", async (req, res) => {
     try {
