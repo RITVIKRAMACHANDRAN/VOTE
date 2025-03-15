@@ -38,22 +38,21 @@ function App() {
         }
     }, [walletAddress]);
 
-    // ✅ Connect MetaMask
     const connectMetaMask = async () => {
         if (window.ethereum) {
-            const web3 = new Web3(window.ethereum);
             try {
                 await window.ethereum.request({ method: "eth_requestAccounts" });
-                const accounts = await web3.eth.getAccounts();
-                setWalletAddress(accounts[0]);
-                alert(`Connected: ${accounts[0]}`);
+                const accounts = await window.ethereum.request({ method: "eth_accounts" });
+                console.log("✅ MetaMask Connected:", accounts[0]); // Debugging log
+                setWalletAddress(accounts[0]); // ✅ Update state
             } catch (error) {
-                console.error("MetaMask connection failed:", error);
+                console.error("❌ MetaMask connection failed:", error);
             }
         } else {
             alert("MetaMask is not installed.");
         }
     };
+    
 
     // ✅ Add Candidate (Admin Only)
     const addCandidate = async () => {
