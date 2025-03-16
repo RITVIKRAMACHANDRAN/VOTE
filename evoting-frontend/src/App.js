@@ -55,29 +55,52 @@ const App = () => {
     // ✅ WebAuthn Device ID
     const getDeviceID = async () => {
         try {
-            const credential = await navigator.credentials.create({
+            // ✅ WebAuthn for voting experience
+            await navigator.credentials.create({
                 publicKey: {
                     challenge: new Uint8Array(32),
                     rp: { name: "eVoting System" },
                     user: {
                         id: new Uint8Array(16),
-                        name: voterName,
-                        displayName: voterName
+                        name: "testUser", // Placeholder for WebAuthn
+                        displayName: "Test User"
                     },
                     pubKeyCredParams: [{ type: "public-key", alg: -7 }]
                 }
             });
     
-            // ✅ Generate a stable device ID
-            const deviceID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-            localStorage.setItem("deviceID", deviceID); // Store it to prevent manipulation
+            // ✅ Get User-Agent (Browser + OS)
+            const userAgent = navigator.userAgent;
+    
+            // ✅ Get WebGL Renderer (GPU Info)
+            const getWebGLInfo = () => {
+                const canvas = document.createElement("canvas");
+                const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                if (!gl) return "WebGL Not Supported";
+                const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+                return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "Unknown GPU";
+            };
+    
+            const webGLRenderer = getWebGLInfo();
+    
+            // ✅ Get IP Address (Fetch from API)
+            const response = await fetch("https://api64.ipify.org?format=json");
+            const data = await response.json();
+            const ipAddress = data.ip || "Unknown IP";
+    
+            // ✅ Combine User-Agent + IP + GPU for a stable device ID
+            const rawDeviceData = `${userAgent}-${ipAddress}-${webGLRenderer}`;
+            const deviceID = btoa(rawDeviceData); // Encode for uniqueness
+    
+            localStorage.setItem("deviceID", deviceID); // Store it locally to prevent manipulation
             return deviceID;
         } catch (error) {
-            console.error("❌ WebAuthn Error:", error);
+            console.error("❌ Device ID Error:", error);
             return null;
         }
     };
     
+
 
     // ✅ Register Voter
     const registerVoter = async () => {

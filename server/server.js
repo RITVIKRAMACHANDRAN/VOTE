@@ -53,7 +53,7 @@ app.post("/registerVoter", async (req, res) => {
 
         // ✅ Check if this device has already registered
         const existingVoter = await Voter.findOne({ deviceID });
-        if (existingVoter) return res.status(400).json({ error: "This device is already registered" });
+        if (existingVoter) return res.status(400).json({ error: "This device has already registered a voter" });
 
         // ✅ Generate a stable UUID based on device ID
         const uuid = crypto.createHash("sha256").update(deviceID).digest("hex");
@@ -68,7 +68,6 @@ app.post("/registerVoter", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
 app.post("/vote", async (req, res) => {
     try {
         const { uuid, deviceID, candidate } = req.body;
@@ -96,8 +95,6 @@ app.post("/vote", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
-
 // ✅ Generate SHA-256 Hash of Votes (For Verification)
 const generateVoteHash = async () => {
     const votes = await Candidate.find();
