@@ -6,7 +6,8 @@ const { ethers } = require("ethers");
 const Voter = require("./model/Voter");
 const Candidate = require("./model/Candidate");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid"); 
+const { v4: uuidv4 } = require("uuid");
+const crypto = require("crypto"); 
 
 
 const app = express();
@@ -67,6 +68,18 @@ app.post("/addCandidate", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
+app.get("/webauthn-challenge", (req, res) => {
+    try {
+        // ✅ Generate a random WebAuthn challenge
+        const challenge = crypto.randomBytes(32).toString("base64url");
+        res.json({ challenge });
+    } catch (error) {
+        console.error("❌ Error generating WebAuthn challenge:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
 
 app.post("/registerVoter", async (req, res) => {
     try {

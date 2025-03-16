@@ -88,10 +88,21 @@ const registerVoter = async () => {
     }
 
     try {
+        console.log("🚀 Fetching WebAuthn challenge from backend...");
+
+        // ✅ Fetch WebAuthn challenge from the backend
+        const challengeResponse = await axios.get(`${SERVER_URL}/webauthn-challenge`);
+        const challenge = challengeResponse.data.challenge;
+        if (!challenge) throw new Error("WebAuthn challenge missing!");
+
+        console.log("✅ WebAuthn Challenge Received:", challenge);
+
         console.log("🚀 Starting WebAuthn Registration...");
 
+        // ✅ Ensure WebAuthn gets a proper challenge
         const credential = await startRegistration({
             publicKey: {
+                challenge: Uint8Array.from(challenge, (c) => c.charCodeAt(0)), // ✅ Convert to Uint8Array
                 rp: { name: "E-Voting System" },
                 user: {
                     id: new Uint8Array(16),
@@ -111,7 +122,7 @@ const registerVoter = async () => {
         console.log("🔍 Device ID:", deviceID);
 
         // ✅ Send voter data to backend
-        const response = await axios.post(`/registerVoter`, { voterName, deviceID });
+        const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, deviceID });
 
         if (response.data.uuid) {
             localStorage.setItem("voterUUID", response.data.uuid); // ✅ Store UUID for future voting
@@ -126,6 +137,7 @@ const registerVoter = async () => {
         setMessage("❌ Error registering voter");
     }
 };
+
 const vote = async () => {
     if (!votingStarted) {
         alert("❌ Voting is not active!");
