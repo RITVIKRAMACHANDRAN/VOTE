@@ -69,18 +69,6 @@ app.post("/addCandidate", async (req, res) => {
     }
 });
 
-app.get("/webauthn-challenge", (req, res) => {
-    try {
-        // ✅ Generate a WebAuthn challenge
-        const challenge = crypto.randomBytes(32).toString("base64url");
-        res.json({ challenge });
-    } catch (error) {
-        console.error("❌ Error generating WebAuthn challenge:", error);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
-
 app.post("/registerVoter", async (req, res) => {
     try {
         const { voterName, deviceID } = req.body;

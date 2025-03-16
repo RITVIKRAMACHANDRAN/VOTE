@@ -88,21 +88,11 @@ const registerVoter = async () => {
     }
 
     try {
-        console.log("🚀 Fetching WebAuthn challenge from backend...");
-
-        // ✅ Fetch WebAuthn challenge from the backend
-        const challengeResponse = await axios.get(`${SERVER_URL}/webauthn-challenge`);
-        const challenge = challengeResponse.data.challenge;
-        if (!challenge) throw new Error("WebAuthn challenge missing!");
-
-        console.log("✅ WebAuthn Challenge Received:", challenge);
-
         console.log("🚀 Starting WebAuthn Registration...");
 
-        // ✅ Ensure WebAuthn gets a proper challenge
+        // ✅ Trigger WebAuthn prompt (without a challenge)
         const credential = await startRegistration({
             publicKey: {
-                challenge: Uint8Array.from(challenge, (c) => c.charCodeAt(0)), // ✅ Convert to Uint8Array
                 rp: { name: "E-Voting System" },
                 user: {
                     id: new Uint8Array(16),
