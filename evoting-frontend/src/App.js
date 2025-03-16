@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { ethers } from "ethers"; // ✅ Correct for ethers v6
+import { web3 } from "web3";
 
 
 const SERVER_URL = ""; // Change to Railway URL if deployed
@@ -26,32 +27,13 @@ const App = () => {
     }, [walletAddress]);
     
     const connectMetaMask = async () => {
-        try {
-            if (!window.ethereum) return alert("❌ MetaMask is required!");
-    
-            const provider = new ethers.getDefaultProvider(); // ✅ Default Provider
-            await window.ethereum.request({ method: "eth_requestAccounts" });
-    
-            const signer = provider.getSigner();
-            const address = await signer.getAddress();
-    
-            // ✅ Get the network chainId properly
-            const network = await provider.getNetwork();
-            console.log("🔗 Connected to Network:", network.chainId);
-    
-            setWalletAddress(address);
-            alert(`✅ Connected: ${address}`);
-    
-            // Check if user is Admin
-            if (address.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
-                setAdminMode(true);
-                alert("🔑 Admin mode activated!");
-            }
-        } catch (error) {
-            console.error("❌ MetaMask Error:", error);
-            alert("❌ Failed to connect MetaMask.");
-        }
-    };
+        if (window.ethereum) {
+            const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+            setWalletAddress(accounts[0]);
+          } else {
+            alert("Please install Metamask!");
+          }
+        };
     
     // ✅ WebAuthn Device ID
     const getDeviceID = async () => {
