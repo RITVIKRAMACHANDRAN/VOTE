@@ -81,7 +81,7 @@ app.post("/registerVoter", async (req, res) => {
         // ✅ Connect to blockchain
         const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
         const signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
 
         // ✅ Register voter on blockchain
         const tx = await contract.registerVoter(voterName, deviceID);
@@ -118,7 +118,7 @@ app.post("/vote", async (req, res) => {
         // ✅ Connect to blockchain
         const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
         const signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
 
         // ✅ Submit vote to blockchain
         const tx = await contract.vote(uuid, candidate);
