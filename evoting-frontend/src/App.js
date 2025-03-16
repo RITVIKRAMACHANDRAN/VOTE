@@ -6,9 +6,6 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
 const ADMIN_ADDRESS ="0x0ea217414c1fac69e4cbf49f3d8277df69a76b7d"; 
-const contractJSON = require("./artifacts/contracts/EVoting.sol/EVoting.json"); // ✅ Load JSON
-const contractABI = contractJSON.abi;
-
 
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
@@ -25,17 +22,26 @@ function App() {
                 const { startTime, endTime } = response.data;
                 const currentTime = Math.floor(Date.now() / 1000);
     
-                setVotingStarted(currentTime >= startTime && currentTime <= endTime);
+                console.log("🔍 Current Time:", currentTime);
+                console.log("🕒 Start Time:", startTime, "End Time:", endTime);
+    
+                if (!startTime || !endTime) {
+                    console.log("❌ Voting has not started.");
+                    setVotingStarted(false);
+                } else {
+                    setVotingStarted(currentTime >= startTime && currentTime <= endTime);
+                }
             } catch (error) {
                 console.error("❌ Error fetching voting time:", error);
             }
         };
     
         checkVotingTime();
-        const interval = setInterval(checkVotingTime, 10000); // ✅ Auto-refresh every 10 sec
+        const interval = setInterval(checkVotingTime, 5000); // ✅ Auto-refresh every 5 sec
     
-        return () => clearInterval(interval); // ✅ Cleanup on unmount
+        return () => clearInterval(interval);
     }, []);
+    
     
     useEffect(() => {
         console.log("🔍 Wallet Address:", `"${walletAddress}"`);
@@ -94,7 +100,7 @@ const registerVoter = async () => {
     }
 
     try {
-        console.log("🚀 Starting WebAuthn Registration Without Challenge...");
+        console.log("🚀 Starting WebAuthn Registration");
 
         // ✅ Manually create credentials (Avoids `startRegistration()` challenge error)
         const credential = await navigator.credentials.create({
