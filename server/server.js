@@ -33,6 +33,25 @@ const contract = new ethers.Contract(
     signer
 );
 
+app.post("/addCandidate", async (req, res) => {
+    try {
+        const { name, walletAddress } = req.body;
+        if (!name) return res.status(400).json({ error: "Candidate name is required" });
+
+        const existingCandidate = await Candidate.findOne({ candidateName: name });
+        if (existingCandidate) return res.status(400).json({ error: "Candidate already exists" });
+
+        const newCandidate = new Candidate({ candidateName: name, voteCount: 0 });
+        await newCandidate.save();
+
+        res.json({ message: "✅ Candidate added successfully!" });
+    } catch (error) {
+        console.error("❌ Error adding candidate:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
 app.get("/votingTime", async (req, res) => {
     try {
         const [startTime, endTime] = await contract.getVotingTimes();
