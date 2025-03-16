@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Web3 from "web3";
 import axios from "axios";
 import { startRegistration } from "@simplewebauthn/browser";
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
 const ADMIN_ADDRESS ="0x0ea217414c1fac69e4cbf49f3d8277df69a76b7d"; 
@@ -14,21 +15,22 @@ function App() {
     const [voterName, setVoterName] = useState("");
     const [votingStarted, setVotingStarted] = useState(false);
 
-    
- 
     useEffect(() => {
         const checkVotingTime = async () => {
             try {
                 const response = await axios.get(`${SERVER_URL}/votingTime`);
                 const { startTime, endTime } = response.data;
                 const currentTime = Math.floor(Date.now() / 1000);
-                setVotingStarted(currentTime >= startTime);
+    
+                setVotingStarted(currentTime >= startTime && currentTime <= endTime);
             } catch (error) {
                 console.error("❌ Error fetching voting time:", error);
             }
         };
+    
         checkVotingTime();
     }, []);
+    
     useEffect(() => {
         console.log("🔍 Wallet Address:", `"${walletAddress}"`);
         console.log("🔍 Admin Address (from env):", `"${ADMIN_ADDRESS}"`);
@@ -73,66 +75,78 @@ function App() {
             alert("Error adding candidate.");
         }
     };
-    const registerVoter = async () => {
-        if (votingStarted) {
-            alert("Voter registration is closed!");
-            return;
-        }
-    
-        try {
-            console.log("🚀 Starting WebAuthn Registration...");
-    
-            // ✅ Generate a proper challenge
-            const challengeBuffer = new Uint8Array(32);
-            window.crypto.getRandomValues(challengeBuffer);
-    
-            // ✅ Generate a unique user ID
-            const userIdBuffer = new Uint8Array(16);
-            window.crypto.getRandomValues(userIdBuffer);
-    
-            const credential = await startRegistration({
-                publicKey: {
-                    challenge: challengeBuffer.buffer, // ✅ Ensure challenge is passed correctly
-                    rp: { name: "E-Voting System" },
-                    user: {
-                        id: userIdBuffer.buffer, // ✅ Unique user ID in ArrayBuffer format
-                        name: voterName || "Anonymous Voter",
-                        displayName: voterName || "Anonymous Voter"
-                    },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                    authenticatorSelection: { userVerification: "preferred" },
-                    timeout: 60000 // 60 seconds timeout
-                }
-            });
-    
-            console.log("✅ WebAuthn Registration Successful:", credential);
-    
-            const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-    
-            console.log("🔍 Generated UUID:", uuid);
-    
-            const response = await axios.post(`/registerVoter`, { voterName, uuid });
-    
-            console.log("✅ Voter Registered Successfully:", response.data);
-            setMessage(response.data.message);
-        } catch (error) {
-            console.error("❌ WebAuthn Error:", error);
-            setMessage("❌ Error registering voter");
-        }
-    };
-    
 
-    const vote = async () => {
-        try {
-            const credential = await startRegistration({ publicKey: { challenge: new Uint8Array(32) } });
-            const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+const getDeviceID = async () => {
+    const fp = await FingerprintJS.load();
+    const result = await fp.get();
+    return result.visitorId; // ✅ Returns a unique device ID
+};
+const registerVoter = async () => {
+    if (votingStarted) {
+        alert("Voter registration is closed!");
+        return;
+    }
 
-            const response = await axios.post(`${SERVER_URL}/vote`, { uuid, candidateName });
-            setMessage(response.data.message);
-        } catch (error) {
-            setMessage("❌ Error casting vote");
+    try {
+        console.log("🚀 Starting WebAuthn Registration...");
+
+        const credential = await startRegistration({
+            publicKey: {
+                rp: { name: "E-Voting System" },
+                user: {
+                    id: new Uint8Array(16),
+                    name: voterName || "Anonymous Voter",
+                    displayName: voterName || "Anonymous Voter"
+                },
+                pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                authenticatorSelection: { userVerification: "preferred" },
+                timeout: 60000
+            }
+        });
+
+        console.log("✅ WebAuthn Registration Successful:", credential);
+
+        // ✅ Generate device ID
+        const deviceID = await getDeviceID();
+        console.log("🔍 Device ID:", deviceID);
+
+        // ✅ Send voter data to backend
+        const response = await axios.post(`/registerVoter`, { voterName, deviceID });
+
+        if (response.data.uuid) {
+            localStorage.setItem("voterUUID", response.data.uuid); // ✅ Store UUID for future voting
+            console.log("✅ Voter Registered with UUID:", response.data.uuid);
+            setMessage("✅ Voter registered successfully!");
+        } else {
+            console.error("❌ Error: UUID not received");
+            setMessage("❌ Registration failed. Please try again.");
         }
-    };
+    } catch (error) {
+        console.error("❌ Error registering voter:", error);
+        setMessage("❌ Error registering voter");
+    }
+};
+const vote = async () => {
+    if (!votingStarted) {
+        alert("❌ Voting is not active!");
+        return;
+    }
+
+    try {
+        if (!candidateName) return alert("Enter a candidate's name first!");
+
+        const voterUUID = localStorage.getItem("voterUUID");
+        if (!voterUUID) return alert("❌ UUID not found. Please register first.");
+
+        console.log("🚀 Casting vote...");
+
+        await axios.post(`${SERVER_URL}/vote`, { uuid: voterUUID, candidate: candidateName });
+
+        alert("✅ Vote cast successfully!");
+    } catch (error) {
+        alert("❌ Error casting vote.");
+    }
+};
 
 
  return (

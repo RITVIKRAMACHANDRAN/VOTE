@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fingerprintjs/fingerprintjs": "^4.6.1",
     "@metamask/detect-provider": "^2.0.0",
     "@simplewebauthn/browser": "^13.1.0",
     "@testing-library/dom": "^10.4.0",
