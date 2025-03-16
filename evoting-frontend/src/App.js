@@ -149,7 +149,7 @@ const startVoting = async () => {
             return;
         }
 
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
+        const contract = new ethers.Contract("0x5bA36D8FD18BCEe7609baAD37c2FeF9E8893bd79",contractABI, signer);
 
         // ✅ Set voting start time as now, and end time after 24 hours
         const startTime = Math.floor(Date.now() / 1000);
