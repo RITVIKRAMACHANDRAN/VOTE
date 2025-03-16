@@ -73,23 +73,44 @@ function App() {
             alert("Error adding candidate.");
         }
     };
- 
     const registerVoter = async () => {
         if (votingStarted) {
             alert("Voter registration is closed!");
             return;
         }
-
+    
         try {
-            const credential = await startRegistration({ publicKey: { challenge: new Uint8Array(32) } });
+            console.log("🚀 Starting WebAuthn Registration..."); // Debugging Log
+    
+            const credential = await startRegistration({
+                publicKey: {
+                    challenge: new Uint8Array(32), 
+                    rp: { name: "E-Voting System" },
+                    user: {
+                        id: new Uint8Array(16),
+                        name: voterName,
+                        displayName: voterName
+                    },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }]
+                }
+            });
+    
+            console.log("✅ WebAuthn Registration Successful:", credential); // Debugging Log
+    
             const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-
+    
+            console.log("🔍 Generated UUID:", uuid); // Debugging Log
+    
             const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, uuid });
+    
+            console.log("✅ Voter Registered Successfully:", response.data); // Debugging Log
             setMessage(response.data.message);
         } catch (error) {
+            console.error("❌ WebAuthn Error:", error);
             setMessage("❌ Error registering voter");
         }
     };
+    
 
     const vote = async () => {
         try {
