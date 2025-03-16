@@ -90,9 +90,10 @@ const registerVoter = async () => {
     try {
         console.log("🚀 Starting WebAuthn Registration...");
 
-        // ✅ Trigger WebAuthn prompt (without a challenge)
+        // ✅ Trigger WebAuthn prompt (without a backend challenge)
         const credential = await startRegistration({
             publicKey: {
+                challenge: new Uint8Array(32), // ✅ Fake challenge (Avoids error but does nothing)
                 rp: { name: "E-Voting System" },
                 user: {
                     id: new Uint8Array(16),
