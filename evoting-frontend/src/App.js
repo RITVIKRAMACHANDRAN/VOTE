@@ -1,171 +1,173 @@
 import React, { useState, useEffect } from "react";
-import Web3 from "web3";
 import axios from "axios";
-import FingerprintJS from "@fingerprintjs/fingerprintjs";
+import { ethers } from "ethers";
 
+const SERVER_URL = ""; // Change to Railway URL if deployed
+const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69a76b7D"; // Replace with actual admin address
 
-const SERVER_URL = ""; // Replace with Railway backend URL
-const ADMIN_ADDRESS ="0x0ea217414c1fac69e4cbf49f3d8277df69a76b7d"; 
-
-function App() {
-    const [walletAddress, setWalletAddress] = useState("");
-    const [candidateName, setCandidateName] = useState("");
-    const [adminMode, setAdminMode] = useState(false);
-    const [message, setMessage] = useState("");
+const App = () => {
     const [voterName, setVoterName] = useState("");
-    const [votingStarted, setVotingStarted] = useState(false);
+    const [deviceID, setDeviceID] = useState("");
+    const [candidateName, setCandidateName] = useState("");
+    const [newCandidate, setNewCandidate] = useState("");
+    const [uuid, setUUID] = useState(localStorage.getItem("voterUUID") || null);
+    const [message, setMessage] = useState("");
+    const [adminMode, setAdminMode] = useState(false);
+    const [walletAddress, setWalletAddress] = useState("");
 
+    // ✅ Check if user is Admin
     useEffect(() => {
-        console.log("🔍 Wallet Address:", `"${walletAddress}"`);
-        console.log("🔍 Admin Address (from env):", `"${ADMIN_ADDRESS}"`);
-    
-        if (walletAddress && ADMIN_ADDRESS && walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
-            console.log("✅ Admin Mode Activated");
+        if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
             setAdminMode(true);
         } else {
-            console.log("❌ Not Admin");
             setAdminMode(false);
         }
     }, [walletAddress]);
-    
+
+    // ✅ MetaMask Authentication
     const connectMetaMask = async () => {
-        if (window.ethereum) {
-            try {
-                await window.ethereum.request({ method: "eth_requestAccounts" });
-                const accounts = await window.ethereum.request({ method: "eth_accounts" });
-                console.log("✅ MetaMask Connected:", accounts[0]); // Debugging log
-                setWalletAddress(accounts[0]); // ✅ Update state
-            } catch (error) {
-                console.error("❌ MetaMask connection failed:", error);
+        try {
+            if (!window.ethereum) return alert("❌ MetaMask is required!");
+
+            const provider = new ethers.getDefaultProvider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            const signer = provider.getSigner();
+            const address = await (await signer).getAddress();
+
+            setWalletAddress(address);
+            alert(`✅ Connected: ${address}`);
+
+            // Check if user is Admin
+            if (address.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+                setAdminMode(true);
+                alert("🔑 Admin mode activated!");
             }
-        } else {
-            alert("MetaMask is not installed.");
+        } catch (error) {
+            console.error("❌ MetaMask Error:", error);
+            alert("❌ Failed to connect MetaMask.");
         }
     };
-    
+
+    // ✅ WebAuthn Device ID
+    const getDeviceID = async () => {
+        try {
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: new Uint8Array(32),
+                    rp: { name: "eVoting System" },
+                    user: {
+                        id: new Uint8Array(16),
+                        name: voterName,
+                        displayName: voterName
+                    },
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }]
+                }
+            });
+            return btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+        } catch (error) {
+            console.error("❌ WebAuthn Error:", error);
+            return null;
+        }
+    };
+
+    // ✅ Register Voter
+    const registerVoter = async () => {
+        try {
+            if (!voterName) return alert("Enter voter name first!");
+            const deviceID = await getDeviceID();
+            if (!deviceID) return alert("❌ WebAuthn failed!");
+
+            const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, deviceID });
+
+            if (response.data.uuid) {
+                localStorage.setItem("voterUUID", response.data.uuid);
+                setUUID(response.data.uuid);
+                setMessage("✅ Voter registered successfully!");
+            }
+        } catch (error) {
+            console.error("❌ Error registering voter:", error);
+            setMessage("❌ Error registering voter.");
+        }
+    };
+
+    // ✅ Cast Vote (Manual Candidate Entry)
+    const vote = async () => {
+        try {
+            if (!candidateName) return alert("Enter a candidate's name first!");
+            if (!uuid) return alert("❌ UUID not found. Please register first.");
+
+            await axios.post(`${SERVER_URL}/vote`, { uuid, candidate: candidateName });
+
+            alert("✅ Vote cast successfully!");
+        } catch (error) {
+            alert("❌ Error casting vote.");
+        }
+    };
+
+    // ✅ Verify Votes
+    const verifyVotes = async () => {
+        try {
+            const response = await axios.get(`${SERVER_URL}/verifyVotes`);
+            if (response.data.verified) {
+                alert("✅ Election results are valid!");
+            } else {
+                alert("⚠️ Election results have been tampered with!");
+            }
+        } catch (error) {
+            alert("❌ Error verifying votes.");
+        }
+    };
 
     // ✅ Add Candidate (Admin Only)
     const addCandidate = async () => {
         try {
-            if (!candidateName) return alert("Enter a candidate's name first!");
-
-            await axios.post(`${SERVER_URL}/addCandidate`, {
-                name: candidateName,
-                walletAddress
-            });
-
-            alert("Candidate added successfully!");
+            if (!newCandidate) return alert("Enter candidate name first!");
+            await axios.post(`${SERVER_URL}/addCandidate`, { name: newCandidate });
+            alert("✅ Candidate added successfully!");
+            setNewCandidate("");
         } catch (error) {
-            alert("Error adding candidate.");
+            alert("❌ Error adding candidate.");
         }
     };
 
-const getDeviceID = async () => {
-    const fp = await FingerprintJS.load();
-    const result = await fp.get();
-    return result.visitorId; // ✅ Returns a unique device ID
-};
-const registerVoter = async () => {
-    if (votingStarted) {
-        alert("Voter registration is closed!");
-        return;
-    }
+    return (
+        <div>
+            <h1>🗳 eVoting System</h1>
 
-    try {
-        console.log("🚀 Starting WebAuthn Registration");
+            <button onClick={connectMetaMask}>
+                {walletAddress ? `Connected: ${walletAddress}` : "Connect MetaMask"}
+            </button>
 
-        // ✅ Manually create credentials (Avoids `startRegistration()` challenge error)
-        const credential = await navigator.credentials.create({
-            publicKey: {
-                challenge: new Uint8Array(32).fill(0), // ✅ Dummy challenge (ignored)
-                rp: { name: "E-Voting System" },
-                user: {
-                    id: new Uint8Array(16), // ✅ Unique user ID
-                    name: voterName || "Anonymous Voter",
-                    displayName: voterName || "Anonymous Voter"
-                },
-                pubKeyCredParams: [{ type: "public-key", alg: -7 }],
-                authenticatorSelection: { userVerification: "preferred" },
-                timeout: 60000
-            }
-        });
-
-        console.log("✅ WebAuthn Registration Successful:", credential);
-
-        // ✅ Generate device ID
-        const deviceID = await getDeviceID();
-        console.log("🔍 Device ID:", deviceID);
-
-        // ✅ Send voter data to backend
-        const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, deviceID });
-
-        if (response.data.uuid) {
-            localStorage.setItem("voterUUID", response.data.uuid); // ✅ Store UUID for future voting
-            console.log("✅ Voter Registered with UUID:", response.data.uuid);
-            setMessage("✅ Voter registered successfully!");
-        } else {
-            console.error("❌ Error: UUID not received");
-            setMessage("❌ Registration failed. Please try again.");
-        }
-    } catch (error) {
-        console.error("❌ Error registering voter:", error);
-        setMessage("❌ Error registering voter");
-    }
-};
-const vote = async () => {
-    try {
-        if (!candidateName) return alert("Enter a candidate's name first!");
-
-        const voterUUID = localStorage.getItem("voterUUID");
-        if (!voterUUID) return alert("❌ UUID not found. Please register first.");
-
-        console.log("🚀 Casting vote...");
-
-        await axios.post(`${SERVER_URL}/vote`, { uuid: voterUUID, candidate: candidateName });
-
-        alert("✅ Vote cast successfully!");
-    } catch (error) {
-        alert("❌ Error casting vote.");
-    }
-};
-
-
- return (
-        <div style={{ textAlign: "center", padding: "20px" }}>
-            <h1>E-Voting System</h1>
-            <button onClick={connectMetaMask}>Connect MetaMask</button>
-            <p>Connected Wallet: {walletAddress || "Not Connected"}</p>
-
-            {/* Admin Panel for Adding Candidates */}
             {adminMode && (
                 <div>
-                    <h2>Admin Panel</h2>
+                    <h2>🔑 Admin Panel</h2>
                     <input
                         type="text"
-                        value={candidateName}
-                        onChange={(e) => setCandidateName(e.target.value)}
                         placeholder="Enter Candidate Name"
+                        value={newCandidate}
+                        onChange={(e) => setNewCandidate(e.target.value)}
                     />
                     <button onClick={addCandidate}>Add Candidate</button>
+                    <br />
+                    <button onClick={verifyVotes}>Verify Election Results</button>
                 </div>
-                 
             )}
 
-            
-<div>
-                <h2>Register as Voter</h2>
-                <input type="text" placeholder="Voter Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-                <button onClick={registerVoter}>Register with Fingerprint</button>
-            </div>
+            <h2>📝 Register as a Voter</h2>
+            <input type="text" placeholder="Enter Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
+            <button onClick={registerVoter}>Register</button>
+            <p>{message}</p>
 
-            <div>
-                <h2>Vote</h2>
-                <input type="text" placeholder="Candidate Name" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
-                <button onClick={vote}>Vote</button>
-            </div>
-
-            <h3>{message}</h3>
+            <h2>🗳 Vote for a Candidate</h2>
+            <input
+                type="text"
+                placeholder="Enter Candidate Name"
+                value={candidateName}
+                onChange={(e) => setCandidateName(e.target.value)}
+            />
+            <button onClick={vote}>Vote</button>
         </div>
     );
 };
+
 export default App;
