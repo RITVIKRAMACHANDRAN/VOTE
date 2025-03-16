@@ -82,15 +82,20 @@ function App() {
         try {
             console.log("🚀 Starting WebAuthn Registration...");
     
-            const challengeBuffer = new Uint8Array(32); // ✅ Generate a random challenge
+            // ✅ Generate a proper challenge
+            const challengeBuffer = new Uint8Array(32);
             window.crypto.getRandomValues(challengeBuffer);
+    
+            // ✅ Generate a unique user ID
+            const userIdBuffer = new Uint8Array(16);
+            window.crypto.getRandomValues(userIdBuffer);
     
             const credential = await startRegistration({
                 publicKey: {
-                    challenge: challengeBuffer, // ✅ Fix: Proper challenge
+                    challenge: challengeBuffer.buffer, // ✅ Ensure challenge is passed correctly
                     rp: { name: "E-Voting System" },
                     user: {
-                        id: new Uint8Array(16), // ✅ Unique user ID
+                        id: userIdBuffer.buffer, // ✅ Unique user ID in ArrayBuffer format
                         name: voterName || "Anonymous Voter",
                         displayName: voterName || "Anonymous Voter"
                     },
@@ -115,7 +120,7 @@ function App() {
             setMessage("❌ Error registering voter");
         }
     };
-        
+    
 
     const vote = async () => {
         try {
