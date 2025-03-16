@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { ethers } from "ethers"; // ✅ Correct for ethers v6
-import { web3 } from "web3";
-
 
 const SERVER_URL = ""; // Change to Railway URL if deployed
 const ADMIN_ADDRESS = "0x0EA217414c1FaC69E4CBf49F3d8277dF69a76b7D"; // Replace with actual admin address
@@ -16,6 +13,8 @@ const App = () => {
     const [message, setMessage] = useState("");
     const [adminMode, setAdminMode] = useState(false);
     const [walletAddress, setWalletAddress] = useState("");
+    const [votingStarted, setVotingStarted] = useState(false);
+    const [registrationActive, setRegistrationActive] = useState(true);
 
     // ✅ Check if user is Admin
     useEffect(() => {
@@ -25,6 +24,19 @@ const App = () => {
             setAdminMode(false);
         }
     }, [walletAddress]);
+
+    useEffect(() => {
+        const checkVotingStatus = async () => {
+            try {
+                const response = await axios.get(`${SERVER_URL}/votingStatus`);
+                setVotingStarted(response.data.votingActive);
+                setRegistrationActive(!response.data.votingActive); // If voting is active, disable registration
+            } catch (error) {
+                console.error("❌ Error fetching voting status:", error);
+            }
+        };
+        checkVotingStatus();
+    }, []);
 
     const connectMetaMask = async () => {
         if (window.ethereum) {
@@ -100,10 +112,36 @@ const App = () => {
         }
     };
     
+    
+// ✅ Start Voting (Admin Only)
+const startVoting = async () => {
+    try {
+        const response = await axios.post(`${SERVER_URL}/startVoting`);
+        alert("✅ Voting started!");
+        setVotingStarted(true);
+        setRegistrationActive(false);
+    } catch (error) {
+        console.error("❌ Error starting voting:", error);
+        alert("❌ Failed to start voting.");
+    }
+};
+
+const stopVoting = async () => {
+    try {
+        const response = await axios.post(`${SERVER_URL}/stopVoting`);
+        alert("🚨 Voting stopped!");
+        setVotingStarted(false);
+        setRegistrationActive(true);
+    } catch (error) {
+        console.error("❌ Error stopping voting:", error);
+        alert("❌ Failed to stop voting.");
+    }
+};
 
 
     // ✅ Register Voter
     const registerVoter = async () => {
+        if (votingStarted) return alert("❌ Cannot register. Voting is active!");
         try {
             if (!voterName) return alert("Enter voter name first!");
             const deviceID = await getDeviceID();
@@ -123,6 +161,7 @@ const App = () => {
     };
 
     const vote = async () => {
+        if (registrationActive) return alert("❌ Cannot vote. Registration is still active!");
         try {
             if (!candidateName) return alert("❌ Enter a candidate name!");
     
@@ -185,12 +224,14 @@ const App = () => {
                     <button onClick={addCandidate}>Add Candidate</button>
                     <br />
                     <button onClick={verifyVotes}>Verify Election Results</button>
+                    <button onClick={startVoting} disabled={votingStarted}>Start Voting</button>
+                    <button onClick={stopVoting} disabled={!votingStarted}>Stop Voting</button>
                 </div>
             )}
 
             <h2>📝 Register as a Voter</h2>
             <input type="text" placeholder="Enter Name" value={voterName} onChange={(e) => setVoterName(e.target.value)} />
-            <button onClick={registerVoter}>Register</button>
+            <button onClick={registerVoter} disabled={votingStarted}>Register Voter</button>
             <p>{message}</p>
 
             <h2>🗳 Vote for a Candidate</h2>
@@ -200,7 +241,7 @@ const App = () => {
                 value={candidateName}
                 onChange={(e) => setCandidateName(e.target.value)}
             />
-            <button onClick={vote}>Vote</button>
+            <button onClick={vote} disabled={registrationActive}>Vote</button>
         </div>
     );
 };

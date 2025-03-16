@@ -28,6 +28,14 @@ const checkAdmin = (req, res, next) => {
     next();
 };
 
+let votingActive = false; // ✅ Store voting status in memory
+
+// ✅ API to check voting status
+app.get("/votingStatus", (req, res) => {
+    res.json({ votingActive });
+});
+
+
 // ✅ Add Candidate (Admin Only)
 app.post("/addCandidate", checkAdmin, async (req, res) => {
     try {
@@ -43,6 +51,17 @@ app.post("/addCandidate", checkAdmin, async (req, res) => {
         res.json({ message: "✅ Candidate added successfully!" });
     } catch (error) {
         console.error("❌ Error adding candidate:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ✅ Start Voting (Admin Only)
+app.post("/startVoting", async (req, res) => {
+    try {
+        votingActive = true;
+        res.json({ message: "✅ Voting started!" });
+    } catch (error) {
+        console.error("❌ Error starting voting:", error);
         res.status(500).json({ error: "Server error" });
     }
 });
@@ -65,6 +84,15 @@ app.post("/registerVoter", async (req, res) => {
         res.json({ message: "✅ Voter registered successfully!", uuid });
     } catch (error) {
         console.error("❌ Error registering voter:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+app.post("/stopVoting", async (req, res) => {
+    try {
+        votingActive = false;
+        res.json({ message: "🚨 Voting stopped!" });
+    } catch (error) {
+        console.error("❌ Error stopping voting:", error);
         res.status(500).json({ error: "Server error" });
     }
 });
