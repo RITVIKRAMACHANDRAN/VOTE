@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import Web3 from "web3";
 import axios from "axios";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
-import { ethers } from "ethers";
 
 
 const SERVER_URL = ""; // Replace with Railway backend URL
@@ -33,6 +32,9 @@ function App() {
         };
     
         checkVotingTime();
+        const interval = setInterval(checkVotingTime, 10000); // ✅ Auto-refresh every 10 sec
+    
+        return () => clearInterval(interval); // ✅ Cleanup on unmount
     }, []);
     
     useEffect(() => {
@@ -135,37 +137,18 @@ const registerVoter = async () => {
 
 const startVoting = async () => {
     try {
-        if (!window.ethereum) return alert("❌ MetaMask is required to start voting!");
+        const duration = 7 * 24 * 60 * 60; // ⏳ 7 days in seconds
+        const response = await axios.post(`${SERVER_URL}/startVoting`, { duration });
 
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []); // ✅ Ensure user is connected
-
-        const signer = provider.getSigner();
-
-        // ✅ Ensure the correct network is selected (Sepolia = 11155111)
-        const network = await provider.getNetwork();
-        if (network.chainId !== 11155111) {
-            alert("❌ Please switch to the Sepolia network in MetaMask.");
-            return;
+        if (response.data.message) {
+            alert("✅ Voting time started successfully!");
+            setVotingStarted(true); // ✅ Update UI state
         }
-
-        const contract = new ethers.Contract("0x5bA36D8FD18BCEe7609baAD37c2FeF9E8893bd79",contractABI, signer);
-
-        // ✅ Set voting start time as now, and end time after 24 hours
-        const startTime = Math.floor(Date.now() / 1000);
-        const endTime = startTime + 24 * 60 * 60; // 24 hours later
-
-        console.log("🚀 Setting voting time:", startTime, endTime);
-        const tx = await contract.setVotingTime(startTime, endTime);
-        await tx.wait();
-
-        alert("✅ Voting time started successfully!");
     } catch (error) {
         console.error("❌ Error starting voting time:", error);
         alert("❌ Failed to start voting time.");
     }
 };
-
 
 
 const vote = async () => {
@@ -189,6 +172,19 @@ const vote = async () => {
         alert("❌ Error casting vote.");
     }
 };
+const stopVoting = async () => {
+    try {
+        const response = await axios.post(`${SERVER_URL}/stopVoting`);
+
+        if (response.data.message) {
+            alert("🚨 Voting stopped successfully!");
+            setVotingStarted(false);
+        }
+    } catch (error) {
+        console.error("❌ Error stopping voting:", error);
+        alert("❌ Failed to stop voting.");
+    }
+};
 
 
  return (
@@ -209,6 +205,9 @@ const vote = async () => {
                     />
                     <button onClick={addCandidate}>Add Candidate</button>
                     <button onClick={startVoting}>Start Voting</button>
+                    <button onClick={stopVoting} style={{ backgroundColor: "red", color: "white" }}>
+        Stop Voting
+    </button>
                 </div>
                  
             )}

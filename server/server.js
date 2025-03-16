@@ -8,7 +8,7 @@ const Candidate = require("./model/Candidate");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
- 
+
 
 
 const app = express();
@@ -36,21 +36,6 @@ const contract = new ethers.Contract(
     contractABI, // ✅ Pass only the ABI
     signer
 );
-app.get("/votingTime", async (req, res) => {
-    try {
-        // ✅ Connect to blockchain
-        const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, provider);
-
-        // ✅ Fetch voting times from the blockchain
-        const [startTime, endTime] = await contract.getVotingTimes();
-
-        res.json({ startTime: Number(startTime), endTime: Number(endTime) });
-    } catch (error) {
-        console.error("❌ Error fetching voting time:", error);
-        res.status(500).json({ error: "Server error" });
-    }
-});
 
 app.post("/addCandidate", async (req, res) => {
     try {
@@ -104,6 +89,45 @@ app.post("/registerVoter", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+let votingStartTime = null;
+let votingEndTime = null;
+
+// ✅ Start Voting API
+app.post("/startVoting", async (req, res) => {
+    try {
+        const { duration } = req.body; // Duration in seconds
+        if (!duration) return res.status(400).json({ error: "Duration required" });
+
+        votingStartTime = Math.floor(Date.now() / 1000);
+        votingEndTime = votingStartTime + duration; // Set end time
+
+        console.log("🚀 Voting started:", { votingStartTime, votingEndTime });
+        res.json({ message: "✅ Voting started successfully!", votingStartTime, votingEndTime });
+    } catch (error) {
+        console.error("❌ Error starting voting:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ✅ Stop Voting API
+app.post("/stopVoting", async (req, res) => {
+    try {
+        votingStartTime = null;
+        votingEndTime = null;
+
+        console.log("🚨 Voting stopped!");
+        res.json({ message: "✅ Voting stopped successfully!" });
+    } catch (error) {
+        console.error("❌ Error stopping voting:", error);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// ✅ Fetch Voting Time API
+app.get("/votingTime", async (req, res) => {
+    res.json({ startTime: votingStartTime, endTime: votingEndTime });
+});
+
 
 app.post("/vote", async (req, res) => {
     try {
