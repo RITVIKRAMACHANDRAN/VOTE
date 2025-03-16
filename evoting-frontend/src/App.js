@@ -23,13 +23,15 @@ function App() {
                 const currentTime = Math.floor(Date.now() / 1000);
     
                 console.log("🔍 Current Time:", currentTime);
-                console.log("🕒 Start Time:", startTime, "End Time:", endTime);
+                console.log("🕒 Fetched Start Time:", startTime, "End Time:", endTime);
     
                 if (!startTime || !endTime) {
                     console.log("❌ Voting has not started.");
                     setVotingStarted(false);
                 } else {
-                    setVotingStarted(currentTime >= startTime && currentTime <= endTime);
+                    const isActive = currentTime >= startTime && currentTime <= endTime;
+                    console.log("🔍 Voting Active:", isActive);
+                    setVotingStarted(isActive);
                 }
             } catch (error) {
                 console.error("❌ Error fetching voting time:", error);

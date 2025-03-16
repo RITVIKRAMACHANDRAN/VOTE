@@ -100,7 +100,7 @@ app.post("/startVoting", async (req, res) => {
         votingStartTime = Math.floor(Date.now() / 1000);
         votingEndTime = votingStartTime + duration;
 
-        console.log("🚀 Voting started:", { votingStartTime, votingEndTime });
+        console.log("🚀 Voting started successfully:", { votingStartTime, votingEndTime });
         res.json({ message: "✅ Voting started successfully!", votingStartTime, votingEndTime });
     } catch (error) {
         console.error("❌ Error starting voting:", error);
@@ -108,8 +108,9 @@ app.post("/startVoting", async (req, res) => {
     }
 });
 
-// ✅ Fetch Voting Time API
 app.get("/votingTime", async (req, res) => {
+    console.log("📡 Fetching Voting Time:", { startTime: votingStartTime, endTime: votingEndTime });
+
     if (!votingStartTime || !votingEndTime) {
         return res.json({ startTime: null, endTime: null });
     }
