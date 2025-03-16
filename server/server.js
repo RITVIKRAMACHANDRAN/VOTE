@@ -71,7 +71,7 @@ app.post("/addCandidate", async (req, res) => {
 
 app.get("/webauthn-challenge", (req, res) => {
     try {
-        // ✅ Generate a random WebAuthn challenge
+        // ✅ Generate a WebAuthn challenge
         const challenge = crypto.randomBytes(32).toString("base64url");
         res.json({ challenge });
     } catch (error) {
