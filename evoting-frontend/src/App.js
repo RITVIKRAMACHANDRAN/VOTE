@@ -34,7 +34,24 @@ const App = () => {
             alert("Please install Metamask!");
           }
         };
-    
+        const addCandidate = async () => {
+            try {
+                if (!newCandidate) return alert("Enter candidate name first!");
+                if (!walletAddress) return alert("❌ Connect MetaMask first!");
+        
+                console.log("🔍 Admin Wallet Address:", walletAddress); // Debugging
+        
+                const response = await axios.post(`${SERVER_URL}/addCandidate`, 
+                    { name: newCandidate, walletAddress }
+                );
+        
+                alert("✅ Candidate added successfully!");
+                setNewCandidate("");
+            } catch (error) {
+                console.error("❌ Add Candidate Error:", error.response?.data || error.message);
+                alert("❌ Error adding candidate. Check console for details.");
+            }
+        };
     // ✅ WebAuthn Device ID
     const getDeviceID = async () => {
         try {
@@ -50,12 +67,17 @@ const App = () => {
                     pubKeyCredParams: [{ type: "public-key", alg: -7 }]
                 }
             });
-            return btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+    
+            // ✅ Generate a stable device ID
+            const deviceID = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+            localStorage.setItem("deviceID", deviceID); // Store it to prevent manipulation
+            return deviceID;
         } catch (error) {
             console.error("❌ WebAuthn Error:", error);
             return null;
         }
     };
+    
 
     // ✅ Register Voter
     const registerVoter = async () => {
@@ -105,24 +127,7 @@ const App = () => {
         }
     };
 
- const addCandidate = async () => {
-    try {
-        if (!newCandidate) return alert("Enter candidate name first!");
-        if (!walletAddress) return alert("❌ Connect MetaMask first!");
 
-        console.log("🔍 Admin Wallet Address:", walletAddress); // Debugging
-
-        const response = await axios.post(`${SERVER_URL}/addCandidate`, 
-            { name: newCandidate, walletAddress }
-        );
-
-        alert("✅ Candidate added successfully!");
-        setNewCandidate("");
-    } catch (error) {
-        console.error("❌ Add Candidate Error:", error.response?.data || error.message);
-        alert("❌ Error adding candidate. Check console for details.");
-    }
-};
 
     return (
         <div>

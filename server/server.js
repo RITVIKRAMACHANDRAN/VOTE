@@ -46,20 +46,17 @@ app.post("/addCandidate", checkAdmin, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-
-// ✅ Register Voter (UUID + WebAuthn + Device ID)
 app.post("/registerVoter", async (req, res) => {
     try {
         const { voterName, deviceID } = req.body;
         if (!voterName || !deviceID) return res.status(400).json({ error: "Voter name and device ID required" });
 
-        // ✅ Ensure device is not registered before
+        // ✅ Check if this device has already registered
         const existingVoter = await Voter.findOne({ deviceID });
-        if (existingVoter) return res.status(400).json({ error: "Device already registered" });
+        if (existingVoter) return res.status(400).json({ error: "This device is already registered" });
 
-        // ✅ Generate UUID
-        const uuid = uuidv4();
-        console.log("🔍 Generated UUID:", uuid);
+        // ✅ Generate a stable UUID based on device ID
+        const uuid = crypto.createHash("sha256").update(deviceID).digest("hex");
 
         // ✅ Save voter in MongoDB
         const newVoter = new Voter({ voterName, deviceID, uuid, hasVoted: false });
@@ -72,27 +69,24 @@ app.post("/registerVoter", async (req, res) => {
     }
 });
 
-// ✅ Cast Vote (Manual Candidate Entry)
 app.post("/vote", async (req, res) => {
     try {
-        const { uuid, candidate } = req.body;
-        if (!uuid || !candidate) return res.status(400).json({ error: "UUID and candidate name required" });
+        const { uuid, deviceID, candidate } = req.body;
+        if (!uuid || !deviceID || !candidate) return res.status(400).json({ error: "UUID, Device ID, and candidate required" });
 
-        // ✅ Fetch voter using UUID
-        const voter = await Voter.findOne({ uuid });
+        // ✅ Check if this device has already voted
+        const voter = await Voter.findOne({ deviceID });
         if (!voter) return res.status(400).json({ error: "Voter not registered" });
 
-        // ✅ Ensure voter hasn't already voted
-        if (voter.hasVoted) return res.status(400).json({ error: "Voter has already voted" });
+        if (voter.hasVoted) return res.status(400).json({ error: "This device has already voted" });
 
-        // ✅ Fetch candidate and update vote count
+        // ✅ Proceed with voting
         const candidateDoc = await Candidate.findOne({ candidateName: candidate });
         if (!candidateDoc) return res.status(400).json({ error: "Candidate not found" });
 
-        candidateDoc.voteCount += 1; // ✅ Increment vote count
+        candidateDoc.voteCount += 1;
         await candidateDoc.save();
 
-        // ✅ Mark voter as having voted
         voter.hasVoted = true;
         await voter.save();
 
@@ -102,6 +96,7 @@ app.post("/vote", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
 
 // ✅ Generate SHA-256 Hash of Votes (For Verification)
 const generateVoteHash = async () => {
