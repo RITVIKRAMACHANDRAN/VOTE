@@ -29,15 +29,19 @@ function App() {
         };
         checkVotingTime();
     }, []);
-
     useEffect(() => {
-        if (walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+        console.log("🔍 Wallet Address:", `"${walletAddress}"`);
+        console.log("🔍 Admin Address (from env):", `"${ADMIN_ADDRESS}"`);
+    
+        if (walletAddress && ADMIN_ADDRESS && walletAddress.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) {
+            console.log("✅ Admin Mode Activated");
             setAdminMode(true);
         } else {
+            console.log("❌ Not Admin");
             setAdminMode(false);
         }
     }, [walletAddress]);
-
+    
     const connectMetaMask = async () => {
         if (window.ethereum) {
             try {
