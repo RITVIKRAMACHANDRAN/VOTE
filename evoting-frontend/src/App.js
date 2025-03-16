@@ -4,7 +4,7 @@ import axios from "axios";
 import { startRegistration } from "@simplewebauthn/browser";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
-const ADMIN_ADDRESS = process.env.REACT_APP_ADMIN_ADDRESS || ""; // ✅ Fix
+const ADMIN_ADDRESS ="   0x0ea217414c1fac69e4cbf49f3d8277df69a76b7d  "; 
 
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
