@@ -7,7 +7,8 @@ const Voter = require("./model/Voter");
 const Candidate = require("./model/Candidate");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
-const crypto = require("crypto"); 
+const crypto = require("crypto");
+ 
 
 
 const app = express();
@@ -103,6 +104,7 @@ app.post("/registerVoter", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
 app.post("/vote", async (req, res) => {
     try {
         const { uuid, candidate } = req.body;

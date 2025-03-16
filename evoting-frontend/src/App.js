@@ -2,9 +2,14 @@ import React, { useState, useEffect } from "react";
 import Web3 from "web3";
 import axios from "axios";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
+import { ethers } from "ethers";
+
 
 const SERVER_URL = ""; // Replace with Railway backend URL
 const ADMIN_ADDRESS ="0x0ea217414c1fac69e4cbf49f3d8277df69a76b7d"; 
+const contractJSON = require("./artifacts/contracts/EVoting.sol/EVoting.json"); // ✅ Load JSON
+const contractABI = contractJSON.abi;
+
 
 function App() {
     const [walletAddress, setWalletAddress] = useState("");
@@ -128,6 +133,29 @@ const registerVoter = async () => {
     }
 };
 
+const startVoting = async () => {
+    try {
+        if (!window.ethereum) return alert("❌ MetaMask is required to start voting!");
+
+        const provider = new ethers.getDefaultProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
+
+        // ✅ Set voting start time as now, and end time after 24 hours (adjust as needed)
+        const startTime = Math.floor(Date.now() / 1000); // Convert to Unix timestamp
+        const endTime = startTime + 24 * 60 * 60; // 24 hours later
+
+        console.log("🚀 Setting voting time:", startTime, endTime);
+        const tx = await contract.setVotingTime(startTime, endTime);
+        await tx.wait();
+
+        alert("✅ Voting time started successfully!");
+    } catch (error) {
+        console.error("❌ Error starting voting time:", error);
+        alert("❌ Failed to start voting time.");
+    }
+};
+
 
 const vote = async () => {
     if (!votingStarted) {
@@ -169,7 +197,9 @@ const vote = async () => {
                         placeholder="Enter Candidate Name"
                     />
                     <button onClick={addCandidate}>Add Candidate</button>
+                    <button onClick={startVoting}>Start Voting</button>
                 </div>
+                 
             )}
 
             
