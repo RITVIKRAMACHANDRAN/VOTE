@@ -71,24 +71,41 @@ app.post("/registerVoter", async (req, res) => {
 app.post("/vote", async (req, res) => {
     try {
         const { uuid, deviceID, candidate } = req.body;
-        if (!uuid || !deviceID || !candidate) return res.status(400).json({ error: "UUID, Device ID, and candidate required" });
+
+        // ✅ Debugging: Log incoming data
+        console.log("📡 Vote Request Received:", { uuid, deviceID, candidate });
+
+        if (!uuid || !deviceID || !candidate) {
+            return res.status(400).json({ error: "UUID, Device ID, and candidate required" });
+        }
 
         // ✅ Check if this device has already voted
         const voter = await Voter.findOne({ deviceID });
-        if (!voter) return res.status(400).json({ error: "Voter not registered" });
+        if (!voter) {
+            console.log("❌ Voter not found for deviceID:", deviceID);
+            return res.status(400).json({ error: "Voter not registered" });
+        }
 
-        if (voter.hasVoted) return res.status(400).json({ error: "This device has already voted" });
+        if (voter.hasVoted) {
+            console.log("❌ Duplicate vote attempt detected for deviceID:", deviceID);
+            return res.status(400).json({ error: "This device has already voted" });
+        }
 
-        // ✅ Proceed with voting
+        // ✅ Fetch candidate and update vote count
         const candidateDoc = await Candidate.findOne({ candidateName: candidate });
-        if (!candidateDoc) return res.status(400).json({ error: "Candidate not found" });
+        if (!candidateDoc) {
+            console.log("❌ Candidate not found:", candidate);
+            return res.status(400).json({ error: "Candidate not found" });
+        }
 
         candidateDoc.voteCount += 1;
         await candidateDoc.save();
 
+        // ✅ Mark voter as having voted
         voter.hasVoted = true;
         await voter.save();
 
+        console.log("✅ Vote successfully cast by device:", deviceID);
         res.json({ message: "✅ Vote cast successfully!" });
     } catch (error) {
         console.error("❌ Error casting vote:", error);

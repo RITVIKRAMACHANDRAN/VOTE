@@ -122,19 +122,32 @@ const App = () => {
         }
     };
 
-    // ✅ Cast Vote (Manual Candidate Entry)
     const vote = async () => {
         try {
-            if (!candidateName) return alert("Enter a candidate's name first!");
-            if (!uuid) return alert("❌ UUID not found. Please register first.");
-
-            await axios.post(`${SERVER_URL}/vote`, { uuid, candidate: candidateName });
-
-            alert("✅ Vote cast successfully!");
+            if (!candidateName) return alert("❌ Enter a candidate name!");
+    
+            const voterUUID = localStorage.getItem("voterUUID");
+            const deviceID = localStorage.getItem("deviceID");
+    
+            if (!voterUUID || !deviceID) {
+                return alert("❌ UUID or Device ID not found. Please register first.");
+            }
+    
+            console.log("📡 Sending Vote Request:", { uuid: voterUUID, deviceID, candidate: candidateName });
+    
+            const response = await axios.post(`${SERVER_URL}/vote`, {
+                uuid: voterUUID,
+                deviceID,
+                candidate: candidateName
+            });
+    
+            alert(response.data.message);
         } catch (error) {
-            alert("❌ Error casting vote.");
+            console.error("❌ Error casting vote:", error.response?.data || error.message);
+            alert("❌ Error casting vote. Check console for details.");
         }
     };
+    
 
     // ✅ Verify Votes
     const verifyVotes = async () => {
