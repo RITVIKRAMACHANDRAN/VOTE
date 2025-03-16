@@ -7,7 +7,7 @@ const Voter = require("./model/Voter");
 const Candidate = require("./model/Candidate");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid"); 
-const ethers = require("ethers");
+
 
 const app = express();
 app.use(express.json());
