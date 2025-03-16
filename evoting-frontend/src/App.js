@@ -25,7 +25,7 @@ const App = () => {
             setAdminMode(false);
         }
     }, [walletAddress]);
-    
+
     const connectMetaMask = async () => {
         if (window.ethereum) {
             const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
@@ -105,17 +105,24 @@ const App = () => {
         }
     };
 
-    // ✅ Add Candidate (Admin Only)
-    const addCandidate = async () => {
-        try {
-            if (!newCandidate) return alert("Enter candidate name first!");
-            await axios.post(`${SERVER_URL}/addCandidate`, { name: newCandidate });
-            alert("✅ Candidate added successfully!");
-            setNewCandidate("");
-        } catch (error) {
-            alert("❌ Error adding candidate.");
-        }
-    };
+ const addCandidate = async () => {
+    try {
+        if (!newCandidate) return alert("Enter candidate name first!");
+        if (!walletAddress) return alert("❌ Connect MetaMask first!");
+
+        console.log("🔍 Admin Wallet Address:", walletAddress); // Debugging
+
+        const response = await axios.post(`${SERVER_URL}/addCandidate`, 
+            { name: newCandidate, walletAddress }
+        );
+
+        alert("✅ Candidate added successfully!");
+        setNewCandidate("");
+    } catch (error) {
+        console.error("❌ Add Candidate Error:", error.response?.data || error.message);
+        alert("❌ Error adding candidate. Check console for details.");
+    }
+};
 
     return (
         <div>
