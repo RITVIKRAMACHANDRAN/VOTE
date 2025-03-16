@@ -89,49 +89,6 @@ app.post("/registerVoter", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-let votingStartTime = null;
-let votingEndTime = null;
-
-app.post("/startVoting", async (req, res) => {
-    try {
-        const { duration } = req.body;
-        if (!duration) return res.status(400).json({ error: "Duration required" });
-
-        votingStartTime = Math.floor(Date.now() / 1000);
-        votingEndTime = votingStartTime + duration;
-
-        console.log("🚀 Voting started successfully:", { votingStartTime, votingEndTime });
-        res.json({ message: "✅ Voting started successfully!", votingStartTime, votingEndTime });
-    } catch (error) {
-        console.error("❌ Error starting voting:", error);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
-app.get("/votingTime", async (req, res) => {
-    console.log("📡 Fetching Voting Time:", { startTime: votingStartTime, endTime: votingEndTime });
-
-    if (!votingStartTime || !votingEndTime) {
-        return res.json({ startTime: null, endTime: null });
-    }
-    res.json({ startTime: votingStartTime, endTime: votingEndTime });
-});
-
-
-// ✅ Stop Voting API
-app.post("/stopVoting", async (req, res) => {
-    try {
-        votingStartTime = null;
-        votingEndTime = null;
-
-        console.log("🚨 Voting stopped!");
-        res.json({ message: "✅ Voting stopped successfully!" });
-    } catch (error) {
-        console.error("❌ Error stopping voting:", error);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
 app.post("/vote", async (req, res) => {
     try {
         const { uuid, candidate } = req.body;
@@ -143,12 +100,6 @@ app.post("/vote", async (req, res) => {
 
         // ✅ Ensure voter hasn't already voted
         if (voter.hasVoted) return res.status(400).json({ error: "Voter has already voted" });
-
-        // ✅ Check voting time from backend (not blockchain)
-        const currentTime = Math.floor(Date.now() / 1000);
-        if (!votingStartTime || !votingEndTime || currentTime < votingStartTime || currentTime > votingEndTime) {
-            return res.status(400).json({ error: "❌ Voting is not active!" });
-        }
 
         // ✅ Fetch candidate and update vote count
         const candidateDoc = await Candidate.findOne({ name: candidate });

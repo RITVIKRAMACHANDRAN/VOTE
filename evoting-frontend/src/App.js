@@ -16,36 +16,6 @@ function App() {
     const [votingStarted, setVotingStarted] = useState(false);
 
     useEffect(() => {
-        const checkVotingTime = async () => {
-            try {
-                const response = await axios.get(`${SERVER_URL}/votingTime`);
-                const { startTime, endTime } = response.data;
-                const currentTime = Math.floor(Date.now() / 1000);
-    
-                console.log("🔍 Current Time:", currentTime);
-                console.log("🕒 Fetched Start Time:", startTime, "End Time:", endTime);
-    
-                if (!startTime || !endTime) {
-                    console.log("❌ Voting has not started.");
-                    setVotingStarted(false);
-                } else {
-                    const isActive = currentTime >= startTime && currentTime <= endTime;
-                    console.log("🔍 Voting Active:", isActive);
-                    setVotingStarted(isActive);
-                }
-            } catch (error) {
-                console.error("❌ Error fetching voting time:", error);
-            }
-        };
-    
-        checkVotingTime();
-        const interval = setInterval(checkVotingTime, 5000); // ✅ Auto-refresh every 5 sec
-    
-        return () => clearInterval(interval);
-    }, []);
-    
-    
-    useEffect(() => {
         console.log("🔍 Wallet Address:", `"${walletAddress}"`);
         console.log("🔍 Admin Address (from env):", `"${ADMIN_ADDRESS}"`);
     
@@ -142,27 +112,7 @@ const registerVoter = async () => {
         setMessage("❌ Error registering voter");
     }
 };
-
-const startVoting = async () => {
-    try {
-        const duration = 7 * 24 * 60 * 60; // ⏳ 7 days in seconds
-        const response = await axios.post(`${SERVER_URL}/startVoting`, { duration });
-
-        if (response.data.message) {
-            alert("✅ Voting time started successfully!");
-            setVotingStarted(true); // ✅ Update UI state
-        }
-    } catch (error) {
-        console.error("❌ Error starting voting time:", error);
-        alert("❌ Failed to start voting time.");
-    }
-};
 const vote = async () => {
-    if (!votingStarted) {
-        alert("❌ Voting is not active!");
-        return;
-    }
-
     try {
         if (!candidateName) return alert("Enter a candidate's name first!");
 
@@ -176,20 +126,6 @@ const vote = async () => {
         alert("✅ Vote cast successfully!");
     } catch (error) {
         alert("❌ Error casting vote.");
-    }
-};
-
-const stopVoting = async () => {
-    try {
-        const response = await axios.post(`${SERVER_URL}/stopVoting`);
-
-        if (response.data.message) {
-            alert("🚨 Voting stopped successfully!");
-            setVotingStarted(false);
-        }
-    } catch (error) {
-        console.error("❌ Error stopping voting:", error);
-        alert("❌ Failed to stop voting.");
     }
 };
 
@@ -211,10 +147,6 @@ const stopVoting = async () => {
                         placeholder="Enter Candidate Name"
                     />
                     <button onClick={addCandidate}>Add Candidate</button>
-                    <button onClick={startVoting}>Start Voting</button>
-                    <button onClick={stopVoting} style={{ backgroundColor: "red", color: "white" }}>
-        Stop Voting
-    </button>
                 </div>
                  
             )}
