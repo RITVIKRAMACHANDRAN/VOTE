@@ -140,12 +140,20 @@ app.post("/vote", async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
-// ✅ Generate SHA-256 Hash of Votes (For Verification)
 const generateVoteHash = async () => {
-    const votes = await Candidate.find();
-    const voteData = JSON.stringify(votes);
+    try {
+        const votes = await Candidate.find();
+        if (!votes || votes.length === 0) {
+            console.log("❌ No votes found in the database!");
+            return "NO_VOTES"; // Return a placeholder hash if no votes exist
+        }
 
-    return crypto.createHash("sha256").update(voteData).digest("hex");
+        const voteData = JSON.stringify(votes);
+        return crypto.createHash("sha256").update(voteData).digest("hex");
+    } catch (error) {
+        console.error("❌ Error generating vote hash:", error);
+        return "ERROR_HASH"; // Return a placeholder hash to avoid crashes
+    }
 };
 
 // ✅ Store Vote Hash After Election (Admin Only)
@@ -164,16 +172,32 @@ app.post("/storeVoteHash", checkAdmin, async (req, res) => {
 // ✅ Verify Election Results
 app.get("/verifyVotes", async (req, res) => {
     try {
-        const storedHashEntry = await HashStore.findOne().sort({ timestamp: -1 });
-        if (!storedHashEntry) return res.status(400).json({ error: "No hash found!" });
+        console.log("📡 Verifying votes...");
 
+        // ✅ Fetch the most recent stored vote hash
+        const storedHashEntry = await HashStore.findOne().sort({ timestamp: -1 });
+        if (!storedHashEntry) {
+            console.log("❌ No stored hash found!");
+            return res.status(400).json({ error: "No stored hash found!" });
+        }
+
+        console.log("🔍 Stored Hash:", storedHashEntry.hash);
+
+        // ✅ Generate a new hash of the current votes
         const computedHash = await generateVoteHash();
-        res.json({ verified: storedHashEntry.hash === computedHash, storedHash: storedHashEntry.hash, computedHash });
+        console.log("🔍 Computed Hash:", computedHash);
+
+        // ✅ Compare stored hash with computed hash
+        const isVerified = storedHashEntry.hash === computedHash;
+        console.log("✅ Verification Status:", isVerified ? "MATCH" : "MISMATCH");
+
+        res.json({ verified: isVerified, storedHash: storedHashEntry.hash, computedHash });
     } catch (error) {
         console.error("❌ Error verifying votes:", error);
-        res.status(500).json({ error: "Server error" });
+        res.status(500).json({ error: "Server error during vote verification" });
     }
 });
+
 
 const buildPath = path.join(__dirname, "build");
 app.use(express.static(buildPath));
