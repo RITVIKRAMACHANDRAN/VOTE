@@ -79,7 +79,7 @@ app.post("/registerVoter", async (req, res) => {
         if (existingVoter) return res.status(400).json({ error: "Device already registered" });
 
         // ✅ Connect to blockchain
-        const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
+        const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
         const signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
