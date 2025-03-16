@@ -149,8 +149,6 @@ const startVoting = async () => {
         alert("❌ Failed to start voting time.");
     }
 };
-
-
 const vote = async () => {
     if (!votingStarted) {
         alert("❌ Voting is not active!");
@@ -172,6 +170,7 @@ const vote = async () => {
         alert("❌ Error casting vote.");
     }
 };
+
 const stopVoting = async () => {
     try {
         const response = await axios.post(`${SERVER_URL}/stopVoting`);

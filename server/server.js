@@ -128,7 +128,6 @@ app.get("/votingTime", async (req, res) => {
     res.json({ startTime: votingStartTime, endTime: votingEndTime });
 });
 
-
 app.post("/vote", async (req, res) => {
     try {
         const { uuid, candidate } = req.body;
@@ -141,14 +140,12 @@ app.post("/vote", async (req, res) => {
         // ✅ Ensure voter hasn't already voted
         if (voter.hasVoted) return res.status(400).json({ error: "Voter has already voted" });
 
-        // ✅ Connect to blockchain
-        const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
-        const signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
-        const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
+        // ✅ Fetch candidate and update vote count
+        const candidateDoc = await Candidate.findOne({ name: candidate });
+        if (!candidateDoc) return res.status(400).json({ error: "Candidate not found" });
 
-        // ✅ Submit vote to blockchain
-        const tx = await contract.vote(uuid, candidate);
-        await tx.wait();
+        candidateDoc.voteCount += 1; // ✅ Increment vote count
+        await candidateDoc.save();
 
         // ✅ Mark voter as having voted
         voter.hasVoted = true;
