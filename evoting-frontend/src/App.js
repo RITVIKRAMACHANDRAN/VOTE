@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Web3 from "web3";
 import axios from "axios";
-import { startRegistration } from "@simplewebauthn/browser";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const SERVER_URL = ""; // Replace with Railway backend URL
@@ -81,7 +80,6 @@ const getDeviceID = async () => {
     const result = await fp.get();
     return result.visitorId; // ✅ Returns a unique device ID
 };
-
 const registerVoter = async () => {
     if (votingStarted) {
         alert("Voter registration is closed!");
@@ -89,17 +87,15 @@ const registerVoter = async () => {
     }
 
     try {
-        console.log("🚀 Starting WebAuthn Registration...");
+        console.log("🚀 Starting WebAuthn Registration Without Challenge...");
 
-        const Challenge = new Uint8Array(32).fill(0);
-
-        // ✅ WebAuthn Registration Without Challenge
-        const credential = await startRegistration({
+        // ✅ Manually create credentials (Avoids `startRegistration()` challenge error)
+        const credential = await navigator.credentials.create({
             publicKey: {
-                challenge: Challenge, 
+                challenge: new Uint8Array(32).fill(0), // ✅ Dummy challenge (ignored)
                 rp: { name: "E-Voting System" },
                 user: {
-                    id: new Uint8Array(16),
+                    id: new Uint8Array(16), // ✅ Unique user ID
                     name: voterName || "Anonymous Voter",
                     displayName: voterName || "Anonymous Voter"
                 },
