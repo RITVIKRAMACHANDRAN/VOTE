@@ -137,12 +137,22 @@ const startVoting = async () => {
     try {
         if (!window.ethereum) return alert("❌ MetaMask is required to start voting!");
 
-        const provider = new ethers.getDefaultProvider(window.ethereum);
-        const signer = await provider.getSigner();
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []); // ✅ Ensure user is connected
+
+        const signer = provider.getSigner();
+
+        // ✅ Ensure the correct network is selected (Sepolia = 11155111)
+        const network = await provider.getNetwork();
+        if (network.chainId !== 11155111) {
+            alert("❌ Please switch to the Sepolia network in MetaMask.");
+            return;
+        }
+
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, signer);
 
-        // ✅ Set voting start time as now, and end time after 24 hours (adjust as needed)
-        const startTime = Math.floor(Date.now() / 1000); // Convert to Unix timestamp
+        // ✅ Set voting start time as now, and end time after 24 hours
+        const startTime = Math.floor(Date.now() / 1000);
         const endTime = startTime + 24 * 60 * 60; // 24 hours later
 
         console.log("🚀 Setting voting time:", startTime, endTime);
@@ -155,6 +165,7 @@ const startVoting = async () => {
         alert("❌ Failed to start voting time.");
     }
 };
+
 
 
 const vote = async () => {
