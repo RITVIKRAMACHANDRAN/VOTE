@@ -38,7 +38,7 @@ const contract = new ethers.Contract(
 app.get("/votingTime", async (req, res) => {
     try {
         // ✅ Connect to blockchain
-        const provider = new ethers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
+        const provider = new ethers.getDefaultProvider(process.env.ETHEREUM_RPC_URL);
         const contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, provider);
 
         // ✅ Fetch voting times from the blockchain
