@@ -80,30 +80,35 @@ function App() {
         }
     
         try {
-            console.log("🚀 Starting WebAuthn Registration..."); // Debugging Log
+            console.log("🚀 Starting WebAuthn Registration...");
+    
+            const challengeBuffer = new Uint8Array(32); // ✅ Generate challenge
+            window.crypto.getRandomValues(challengeBuffer); // ✅ Fill challenge with random values
     
             const credential = await startRegistration({
                 publicKey: {
-                    challenge: new Uint8Array(32), 
+                    challenge: challengeBuffer, // ✅ Fix: Challenge must be a random Uint8Array
                     rp: { name: "E-Voting System" },
                     user: {
-                        id: new Uint8Array(16),
+                        id: new Uint8Array(16), // ✅ Unique user ID
                         name: voterName,
                         displayName: voterName
                     },
-                    pubKeyCredParams: [{ type: "public-key", alg: -7 }]
+                    pubKeyCredParams: [{ type: "public-key", alg: -7 }],
+                    authenticatorSelection: { userVerification: "preferred" },
+                    timeout: 60000 // ✅ 60 seconds timeout
                 }
             });
     
-            console.log("✅ WebAuthn Registration Successful:", credential); // Debugging Log
+            console.log("✅ WebAuthn Registration Successful:", credential);
     
             const uuid = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
     
-            console.log("🔍 Generated UUID:", uuid); // Debugging Log
+            console.log("🔍 Generated UUID:", uuid);
     
-            const response = await axios.post(`${SERVER_URL}/registerVoter`, { voterName, uuid });
+            const response = await axios.post(`/registerVoter`, { voterName, uuid });
     
-            console.log("✅ Voter Registered Successfully:", response.data); // Debugging Log
+            console.log("✅ Voter Registered Successfully:", response.data);
             setMessage(response.data.message);
         } catch (error) {
             console.error("❌ WebAuthn Error:", error);
