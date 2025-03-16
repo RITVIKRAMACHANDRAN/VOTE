@@ -81,6 +81,7 @@ const getDeviceID = async () => {
     const result = await fp.get();
     return result.visitorId; // ✅ Returns a unique device ID
 };
+
 const registerVoter = async () => {
     if (votingStarted) {
         alert("Voter registration is closed!");
@@ -90,10 +91,12 @@ const registerVoter = async () => {
     try {
         console.log("🚀 Starting WebAuthn Registration...");
 
-        // ✅ Trigger WebAuthn prompt (without a backend challenge)
+        const Challenge = new Uint8Array(32).fill(0);
+
+        // ✅ WebAuthn Registration Without Challenge
         const credential = await startRegistration({
             publicKey: {
-                challenge: new Uint8Array(32), // ✅ Fake challenge (Avoids error but does nothing)
+                challenge: Challenge, 
                 rp: { name: "E-Voting System" },
                 user: {
                     id: new Uint8Array(16),
@@ -128,6 +131,7 @@ const registerVoter = async () => {
         setMessage("❌ Error registering voter");
     }
 };
+
 
 const vote = async () => {
     if (!votingStarted) {
