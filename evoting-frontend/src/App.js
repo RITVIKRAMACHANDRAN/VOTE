@@ -202,7 +202,16 @@ const stopVoting = async () => {
         }
     };
 
-
+    const storeVoteHash = async () => {
+        try {
+            const response = await axios.post(`${SERVER_URL}/storeVoteHash`, { walletAddress });
+            alert("✅ Vote hash stored successfully!");
+        } catch (error) {
+            console.error("❌ Error storing vote hash:", error);
+            alert("❌ Error storing vote hash. Check console for details.");
+        }
+    };
+    
 
     return (
         <div>
@@ -226,6 +235,7 @@ const stopVoting = async () => {
                     <button onClick={verifyVotes}>Verify Election Results</button>
                     <button onClick={startVoting} disabled={votingStarted}>Start Voting</button>
                     <button onClick={stopVoting} disabled={!votingStarted}>Stop Voting</button>
+                    <button onClick={storeVoteHash}>Store Vote Hash</button>
                 </div>
             )}
 
